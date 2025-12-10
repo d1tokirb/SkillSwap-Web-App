@@ -1,0 +1,200 @@
+"use client";
+
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { CheckCircle } from "lucide-react";
+
+interface RequestWithId {
+    id: string;
+    fromUserId: string;
+    fromUserName: string;
+    toUserId: string;
+    toUserName: string;
+    skill: string;
+    status: "pending" | "accepted" | "rejected" | "completed";
+    createdAt: string;
+    rating?: number;
+    review?: string;
+}
+
+export default function RequestsPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+    const [incomingRequests, setIncomingRequests] = useState<RequestWithId[]>([]);
+    const [fetching, setFetching] = useState(true);
+
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push("/login");
+        } else if (user) {
+            fetchIncomingRequests();
+        }
+    }, [user, loading, router]);
+
+    const fetchIncomingRequests = async () => {
+        if (!user) return;
+        try {
+            const qIncoming = query(collection(db, "requests"), where("toUserId", "==", user.uid));
+            const snapIncoming = await getDocs(qIncoming);
+            const inc: RequestWithId[] = [];
+            snapIncoming.forEach(doc => inc.push({ id: doc.id, ...doc.data() } as RequestWithId));
+            inc.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setIncomingRequests(inc);
+            setFetching(false);
+        } catch (e) {
+            console.error(e);
+            setFetching(false);
+        }
+    };
+
+    const handleRequestAction = async (requestId: string, status: "accepted" | "rejected" | "completed") => {
+        try {
+            await updateDoc(doc(db, "requests", requestId), { status });
+            setIncomingRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r));
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    if (loading || !user || fetching) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 max-w-7xl">
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Teaching Requests</h1>
+                <p className="text-muted-foreground">Manage requests from students who want to learn from you.</p>
+            </div>
+
+            {/* Active Requests Section (Incoming) */}
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    Active Tasks <span className="text-sm font-normal text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">{incomingRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').length}</span>
+                </h2>
+
+                {incomingRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').length === 0 ? (
+                    <p className="text-muted-foreground italic">No active requests.</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {incomingRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').map((req) => (
+                            <div key={req.id} className="glass-card p-5 rounded-xl flex flex-col justify-between">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
+                                            {req.fromUserName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-sm text-white">{req.fromUserName}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(req.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                        req.status === 'accepted' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                            req.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                                'bg-red-500/10 text-red-400 border-red-500/20'
+                                        }`}>
+                                        {req.status}
+                                    </div>
+                                </div>
+
+                                <p className="text-sm mb-4 text-gray-300">
+                                    Requested help learning <span className="font-medium text-indigo-300">{req.skill}</span>.
+                                </p>
+
+                                <div className="mt-auto">
+                                    {req.status === "pending" ? (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => handleRequestAction(req.id, "accepted")}
+                                                className="bg-green-600/80 hover:bg-green-600 text-white border-none w-full backdrop-blur-sm"
+                                            >
+                                                Accept
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleRequestAction(req.id, "rejected")}
+                                                className="text-red-400 hover:text-red-300 border-red-500/30 hover:bg-red-500/10 w-full"
+                                            >
+                                                Decline
+                                            </Button>
+                                        </div>
+                                    ) : req.status === "accepted" ? (
+                                        <Button size="sm" onClick={() => handleRequestAction(req.id, "completed")} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white border-none flex items-center justify-center gap-2">
+                                            <CheckCircle className="h-4 w-4" /> Mark Complete
+                                        </Button>
+                                    ) : (
+                                        <div className="text-center text-xs text-muted-foreground py-2">
+                                            No further actions.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* History Section */}
+            <div className="space-y-6 pt-8 border-t border-white/10">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    History <span className="text-sm font-normal text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">{incomingRequests.filter(r => r.status === 'completed' || r.status === 'rejected').length}</span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                    {incomingRequests.filter(r => r.status === 'completed' || r.status === 'rejected').length === 0 ? (
+                        <p className="text-muted-foreground italic col-span-full">No history yet.</p>
+                    ) : (
+                        incomingRequests.filter(r => r.status === 'completed' || r.status === 'rejected').map((req) => (
+                            <div key={req.id} className="glass-card p-5 rounded-xl opacity-80 hover:opacity-100 transition-all">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
+                                            {req.fromUserName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-sm text-white">{req.fromUserName}</p>
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(req.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                        'bg-red-500/10 text-red-400 border-red-500/20'
+                                        }`}>
+                                        {req.status}
+                                    </div>
+                                </div>
+                                <p className="text-sm mb-4 text-gray-300">
+                                    Requested help learning <span className="font-medium text-indigo-300">{req.skill}</span>.
+                                </p>
+                                {req.status === 'completed' && req.rating && (
+                                    <div className="bg-black/20 rounded-lg p-2 text-center border border-white/5 mt-auto">
+                                        <div className="flex justify-center text-yellow-500 gap-1 text-sm">
+                                            {[...Array(5)].map((_, i) => (
+                                                <span key={i} className={i < (req.rating || 0) ? "" : "text-white/20"}>★</span>
+                                            ))}
+                                        </div>
+                                        {req.review && <p className="text-xs text-gray-400 mt-1 line-clamp-1">"{req.review}"</p>}
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
