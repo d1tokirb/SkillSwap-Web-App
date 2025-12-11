@@ -1,15 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  /* Dark Theme Default */
-  --background: #020617;
-  /* Slate 950 */
-  --foreground: #f8fafc;
+  /* Default to Light Mode Variables */
+  --background: #f8fafc;
   /* Slate 50 */
-
-  /* Dark Theme Default - Adjusted for "Deep Navy & Dark Blue/Black" */
-  --background: #0c1121;
-  --foreground: #f8fafc;
+  --foreground: #020617;
+  /* Slate 950 */
 
   --primary: #2563eb;
   /* Blue 600 */
@@ -19,15 +15,37 @@
   /* Sky 500 */
   --secondary-foreground: #ffffff;
 
+  --muted: #f1f5f9;
+  /* Slate 100 */
+  --muted-foreground: #64748b;
+  /* Slate 500 */
+
+  --card: #ffffff;
+  --card-foreground: #020617;
+
+  --border: #e2e8f0;
+  /* Slate 200 */
+}
+
+/* Dark Mode Overrides */
+.dark {
+  --background: #0c1121;
+  /* Deep Navy */
+  --foreground: #f8fafc;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #0ea5e9;
+  --secondary-foreground: #ffffff;
+
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
 
   --card: rgba(21, 26, 45, 0.6);
-  /* #151a2d with opacity */
   --card-foreground: #f8fafc;
 
   --border: #1e293b;
-  /* Slate 800 */
 }
 
 @theme inline {

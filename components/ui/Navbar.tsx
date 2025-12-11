@@ -46,6 +46,7 @@ export function Navbar() {
             textColor: "#f8fafc",
             links: [
                 { label: "My Profile", href: user ? `/profile/${user.uid}` : "#", ariaLabel: "View Profile" },
+                { label: "Settings", href: "/settings", ariaLabel: "Settings" },
                 { label: "Sign Out", ariaLabel: "Log Out", onClick: handleLogout }
             ]
         }

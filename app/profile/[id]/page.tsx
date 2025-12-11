@@ -2,16 +2,16 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db, auth } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { RequestModal } from "@/components/ui/RequestModal";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { ReportModal } from "@/components/ui/ReportModal";
 import { useNotification } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
-import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Trash2, Flag, AlertTriangle } from "lucide-react";
+import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Flag, Settings } from "lucide-react";
 import { signOut } from "firebase/auth";
 import Image from "next/image";
 
@@ -43,7 +43,7 @@ export default function ProfilePage() {
     const [reviewsList, setReviewsList] = useState<{ id: string, fromUserName: string, rating: number, review?: string, createdAt: string }[]>([]);
 
     // Action States
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
 
     const isOwnProfile = currentUser?.uid === id;
 
@@ -171,25 +171,9 @@ export default function ProfilePage() {
         }
     };
 
-    const handleDeleteAccount = async () => {
-        if (!currentUser || !id) return;
-        try {
-            // Delete user document
-            await deleteDoc(doc(db, "users", id as string));
-
-            // Sign out
-            await signOut(auth);
-            router.push("/");
-            addNotification("Account deleted successfully.", "success");
-        } catch (error) {
-            console.error("Error deleting account:", error);
-            addNotification("Failed to delete account. Please try again.", "info");
-        }
-    };
-
-    const handleReportUser = () => {
-        // Mock report functionality
-        addNotification("User reported successfully. We will review this shortly.", "success");
+    const handleReportSubmit = (reason: string, description: string) => {
+        console.log("Report submitted:", reason, description);
+        addNotification("Report submitted successfully.", "success");
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
@@ -252,17 +236,17 @@ export default function ProfilePage() {
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-9"
-                                    onClick={() => setDeleteConfirmOpen(true)}
+                                    className="border-white/10 text-gray-400 hover:bg-white/5 hover:text-white h-9"
+                                    onClick={() => router.push("/settings")}
                                 >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+                                    <Settings className="mr-2 h-4 w-4" /> Edit Profile
                                 </Button>
                             ) : (
                                 <Button
                                     size="sm"
                                     variant="outline"
                                     className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 h-9"
-                                    onClick={handleReportUser}
+                                    onClick={() => setReportModalOpen(true)}
                                 >
                                     <Flag className="mr-2 h-4 w-4" /> Report User
                                 </Button>
@@ -356,12 +340,11 @@ export default function ProfilePage() {
                     availableSkills={profile.skillsOffered}
                 />
 
-                <ConfirmModal
-                    isOpen={deleteConfirmOpen}
-                    onClose={() => setDeleteConfirmOpen(false)}
-                    onConfirm={handleDeleteAccount}
-                    title="Delete Account"
-                    message="Are you sure you want to delete your account? This action cannot be undone and you will lose all your data."
+                <ReportModal
+                    isOpen={reportModalOpen}
+                    onClose={() => setReportModalOpen(false)}
+                    onSubmit={handleReportSubmit}
+                    userName={profile.name}
                 />
             </motion.div>
         </div>
