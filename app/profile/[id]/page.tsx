@@ -232,16 +232,7 @@ export default function ProfilePage() {
 
                         {/* Action Buttons */}
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                            {isOwnProfile ? (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-white/10 text-gray-400 hover:bg-white/5 hover:text-white h-9"
-                                    onClick={() => router.push("/settings")}
-                                >
-                                    <Settings className="mr-2 h-4 w-4" /> Edit Profile
-                                </Button>
-                            ) : (
+                            {isOwnProfile ? null : (
                                 <Button
                                     size="sm"
                                     variant="outline"

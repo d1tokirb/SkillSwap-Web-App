@@ -21,19 +21,21 @@ export function Navbar() {
 
     if (loading) return null;
 
+    const textColor = "#e0e7ff";
+
     const loggedInItems = [
         {
             label: "Discover",
-            bgColor: "#151a2d", // Matching card color
-            textColor: "#e0e7ff",
+            bgColor: "",
+            textColor: textColor,
             links: [
                 { label: "Community Feed", href: "/dashboard", ariaLabel: "Go to Dashboard" }
             ]
         },
         {
             label: "Activity",
-            bgColor: "#1e243d", // Slightly lighter for contrast
-            textColor: "#f3e8ff",
+            bgColor: "",
+            textColor: textColor,
             links: [
                 { label: "Teaching Requests", href: "/requests", ariaLabel: "View Requests" },
                 { label: "My Learning", href: "/learning", ariaLabel: "View Learning" },
@@ -42,8 +44,8 @@ export function Navbar() {
         },
         {
             label: "Account",
-            bgColor: "#0c1121", // Main bg color
-            textColor: "#f8fafc",
+            bgColor: "",
+            textColor: textColor,
             links: [
                 { label: "My Profile", href: user ? `/profile/${user.uid}` : "#", ariaLabel: "View Profile" },
                 { label: "Settings", href: "/settings", ariaLabel: "Settings" },
@@ -55,8 +57,8 @@ export function Navbar() {
     const loggedOutItems = [
         {
             label: "Product",
-            bgColor: "#0c1121",
-            textColor: "#f8fafc",
+            bgColor: "",
+            textColor: textColor,
             links: [
                 { label: "Features", href: "/#features", ariaLabel: "Features" },
                 { label: "How it works", href: "/#how-it-works", ariaLabel: "How it works" }
@@ -64,8 +66,8 @@ export function Navbar() {
         },
         {
             label: "Join",
-            bgColor: "#151a2d",
-            textColor: "#e0e7ff",
+            bgColor: "",
+            textColor: textColor,
             links: [
                 { label: "Log In", href: "/login", ariaLabel: "Log In" },
                 { label: "Register", href: "/register", ariaLabel: "Register" }
@@ -82,6 +84,7 @@ export function Navbar() {
             buttonTextColor="#fff"
             ctaLabel={!user ? "Get Started" : undefined}
             onCtaClick={!user ? () => router.push("/register") : undefined}
+            menuColor="#fff"
         />
     );
 }

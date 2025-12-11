@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/context/NotificationContext";
+import { SettingsProvider } from "@/context/SettingsContext";
+import { ClientMotionWrapper } from "@/components/ClientMotionWrapper";
 import { Navbar } from "@/components/ui/Navbar";
 import BackgroundManager from "@/components/ui/BackgroundManager";
-import { NotificationProvider } from "@/context/NotificationContext";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,15 +34,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen relative text-white bg-transparent`}
       >
         <AuthProvider>
-          <ThemeProvider>
-            <NotificationProvider>
-              <BackgroundManager />
-              <Navbar />
-              <div className="relative z-10 pt-24">
-                {children}
-              </div>
-            </NotificationProvider>
-          </ThemeProvider>
+          <SettingsProvider>
+            <ClientMotionWrapper>
+              <NotificationProvider>
+                <BackgroundManager />
+                <Navbar />
+                <div className="relative z-10 pt-24">
+                  {children}
+                </div>
+              </NotificationProvider>
+            </ClientMotionWrapper>
+          </SettingsProvider>
         </AuthProvider>
       </body>
     </html>

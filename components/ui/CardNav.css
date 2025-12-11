@@ -15,12 +15,12 @@
     display: block;
     height: 60px;
     padding: 0;
-    /* Modern Minimal Dark Style */
-    background: #0c1121 !important;
-    /* Extracted Main Color */
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    /* Modern Minimal Style */
+    background: var(--background) !important;
+    /* Adapted to theme */
+    border: 1px solid var(--border);
     border-radius: 0.75rem;
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
     /* Soft, deep shadow */
     position: relative;
     overflow: hidden;
@@ -78,7 +78,7 @@
     transform: translate(-50%, -50%);
     font-weight: bold;
     font-size: 1.25rem;
-    color: white;
+    color: var(--foreground);
 }
 
 .logo {
@@ -136,9 +136,9 @@
     user-select: none;
 
     /* Modern Minimal for internal cards */
-    background: #151a2d !important;
+    background: var(--card) !important;
     /* Matches glass-card */
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
     /* Thin, subtle border */
     /* No blur, just clean structure */
     box-shadow: none;
@@ -146,7 +146,8 @@
 }
 
 .nav-card:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
+    filter: brightness(0.95);
+    /* Subtle hover effect */
 }
 
 .nav-card-label {
@@ -170,7 +171,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: inherit;
+    color: var(--foreground);
 }
 
 .nav-card-link:hover {

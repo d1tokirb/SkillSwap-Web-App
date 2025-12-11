@@ -1,36 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  /* Default to Light Mode Variables */
-  --background: #f8fafc;
-  /* Slate 50 */
-  --foreground: #020617;
-  /* Slate 950 */
-
-  --primary: #2563eb;
-  /* Blue 600 */
-  --primary-foreground: #ffffff;
-
-  --secondary: #0ea5e9;
-  /* Sky 500 */
-  --secondary-foreground: #ffffff;
-
-  --muted: #f1f5f9;
-  /* Slate 100 */
-  --muted-foreground: #64748b;
-  /* Slate 500 */
-
-  --card: #ffffff;
-  --card-foreground: #020617;
-
-  --border: #e2e8f0;
-  /* Slate 200 */
-}
-
-/* Dark Mode Overrides */
-.dark {
+  /* Dark Theme Default */
   --background: #0c1121;
-  /* Deep Navy */
   --foreground: #f8fafc;
 
   --primary: #2563eb;
@@ -71,13 +43,11 @@
 
   body {
     @apply bg-background text-foreground;
-    background-color: #0c1121;
-    /* Force Main Navy */
   }
 }
 
 body {
-  background: transparent;
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -87,26 +57,21 @@ body {
   flex-direction: column;
 }
 
-/* Modern Minimal Dark Panel */
+/* Modern Minimal Panel */
 .glass-panel {
-  background: #0c1121;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.2);
-  /* Clean, no blur */
+  background: var(--background);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.1);
 }
 
 .glass-card {
-  background: #151a2d;
-  /* Reverted to lighter navy card */
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.1);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease-in-out;
-  /* Clean, no blur */
 }
 
 .glass-card:hover {
-  background: #1a1f33;
-  /* Hover state */
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.1);
 }
