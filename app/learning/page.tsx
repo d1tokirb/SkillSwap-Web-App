@@ -81,6 +81,26 @@ export default function LearningPage() {
         }
     };
 
+    const handleOpenChat = (targetUserId: string) => {
+        if (!user) return;
+        const participants = [user.uid, targetUserId].sort();
+        const convoId = participants.join("_");
+        router.push(`/messages/${convoId}`);
+    };
+
+    const handleStopSession = async (requestId: string) => {
+        if (!confirm("Are you sure you want to end this session? It will be moved to your history.")) return;
+        try {
+            await updateDoc(doc(db, "requests", requestId), {
+                status: "completed",
+                completedAt: new Date().toISOString()
+            });
+            setSentRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: "completed" } : r));
+        } catch (error) {
+            console.error("Error ending session:", error);
+        }
+    };
+
     if (loading || !user || fetching) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -133,9 +153,21 @@ export default function LearningPage() {
                                         {req.status === 'pending' ? 'Waiting for acceptance...' : 'Session in progress...'}
                                     </div>
                                     {req.status === 'accepted' && (
-                                        <Button className="w-full mt-2 bg-blue-600 hover:bg-blue-700 border-0">
-                                            Open Chat
-                                        </Button>
+                                        <div className="flex gap-2 mt-2">
+                                            <Button
+                                                className="flex-1 bg-blue-600 hover:bg-blue-700 border-0"
+                                                onClick={() => handleOpenChat(req.toUserId)}
+                                            >
+                                                Open Chat
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                                                onClick={() => handleStopSession(req.id)}
+                                            >
+                                                End Session
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
