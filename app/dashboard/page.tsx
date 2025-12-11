@@ -8,13 +8,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Sparkles } from "lucide-react";
 
 export default function Dashboard() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
     const [skillAds, setSkillAds] = useState<{ userId: string, userName: string, skill: string }[]>([]);
+    const [mySkillsSought, setMySkillsSought] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [fetching, setFetching] = useState(true);
     const [startingChat, setStartingChat] = useState("");
@@ -29,6 +30,14 @@ export default function Dashboard() {
 
     const fetchSkills = async () => {
         try {
+            if (user) {
+                const myProfileSnap = await getDoc(doc(db, "users", user.uid));
+                if (myProfileSnap.exists()) {
+                    const data = myProfileSnap.data();
+                    setMySkillsSought(Array.isArray(data.skillsSought) ? data.skillsSought : []);
+                }
+            }
+
             const querySnapshot = await getDocs(collection(db, "users"));
             const ads: { userId: string, userName: string, skill: string }[] = [];
             querySnapshot.forEach((doc) => {
@@ -41,7 +50,7 @@ export default function Dashboard() {
             });
             setSkillAds(ads);
         } catch (e) {
-            console.error("Error fetching skills", e);
+            console.error(e);
         } finally {
             setFetching(false);
         }
@@ -51,7 +60,6 @@ export default function Dashboard() {
         if (!user) return;
         setStartingChat(targetUserId);
 
-        // Create a unique conversation ID (sorted UIDs)
         const participants = [user.uid, targetUserId].sort();
         const convoId = participants.join("_");
 
@@ -60,7 +68,6 @@ export default function Dashboard() {
             const convoSnap = await getDoc(convoRef);
 
             if (!convoSnap.exists()) {
-                // Create new conversation
                 await setDoc(convoRef, {
                     participants: participants,
                     participantNames: {
@@ -74,7 +81,7 @@ export default function Dashboard() {
 
             router.push(`/messages/${convoId}`);
         } catch (error) {
-            console.error("Error starting chat:", error);
+            console.error(error);
         } finally {
             setStartingChat("");
         }
@@ -82,6 +89,11 @@ export default function Dashboard() {
 
     const filteredSkills = skillAds.filter((ad) =>
         ad.skill.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const recommendedSkills = skillAds.filter(ad =>
+        ad.userId !== user?.uid &&
+        mySkillsSought.some(sought => ad.skill.toLowerCase().includes(sought.toLowerCase()))
     );
 
     if (loading || !user || fetching) {
@@ -94,7 +106,6 @@ export default function Dashboard() {
 
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 max-w-7xl">
-            {/* Header Section */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Community Feed</h1>
@@ -119,54 +130,103 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSkills.map((ad, idx) => (
-                    <motion.div
-                        key={`${ad.userId}-${ad.skill}-${idx}`}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: idx * 0.05, duration: 0.3 }}
-                        className="glass-card p-6 rounded-2xl flex flex-col justify-between group"
-                    >
-                        <div>
-                            <div className="flex justify-between items-start mb-4">
-                                <span className="px-3 py-1 bg-blue-500/10 text-blue-300 rounded-full text-sm font-medium border border-blue-500/20">
-                                    {ad.skill}
-                                </span>
-                            </div>
-                            <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
-                            <p className="text-gray-400 text-sm mb-6">
-                                Is offering to teach <span className="text-blue-300">{ad.skill}</span>.
-                            </p>
-                        </div>
-                        <div className="flex gap-3">
-                            <Link href={`/profile/${ad.userId}`} className="flex-1">
-                                <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
-                                    Profile
-                                </Button>
-                            </Link>
-                            {ad.userId !== user.uid && (
-                                <Button
-                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-md active:scale-95 transition-all"
-                                    onClick={() => handleMessage(ad.userId, ad.userName)}
-                                    disabled={startingChat === ad.userId}
-                                >
-                                    {startingChat === ad.userId ? "..." : "Message"}
-                                </Button>
-                            )}
-                        </div>
-                    </motion.div>
-                ))}
-
-                {filteredSkills.length === 0 && (
-                    <div className="col-span-full flex flex-col items-center justify-center py-20 glass-panel rounded-2xl border-dashed border-white/20">
-                        <p className="text-gray-400 text-lg mb-4">No matching skills found.</p>
-                        <Link href={`/profile/${user.uid}`}>
-                            <Button className="bg-blue-600 hover:bg-blue-500">Offer a Skill</Button>
-                        </Link>
+            {recommendedSkills.length > 0 && (
+                <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="text-yellow-400 h-5 w-5" />
+                        <h2 className="text-2xl font-bold text-white">Recommended for You</h2>
                     </div>
-                )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {recommendedSkills.map((ad, idx) => (
+                            <motion.div
+                                key={`rec-${ad.userId}-${ad.skill}-${idx}`}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="glass-card p-6 rounded-2xl flex flex-col justify-between group border-yellow-500/20 shadow-[0_0_15px_-3px_rgba(234,179,8,0.1)]"
+                            >
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <span className="px-3 py-1 bg-yellow-500/10 text-yellow-300 rounded-full text-sm font-medium border border-yellow-500/20 flex items-center gap-1">
+                                            <Sparkles className="h-3 w-3" /> {ad.skill}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
+                                    <p className="text-gray-400 text-sm mb-6">
+                                        Matches your interest in <span className="text-yellow-300">{ad.skill}</span>.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <Link href={`/profile/${ad.userId}`} className="flex-1">
+                                        <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
+                                            Profile
+                                        </Button>
+                                    </Link>
+                                    <Button
+                                        className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white shadow-md active:scale-95 transition-all border-0"
+                                        onClick={() => handleMessage(ad.userId, ad.userName)}
+                                        disabled={startingChat === ad.userId}
+                                    >
+                                        {startingChat === ad.userId ? "..." : "Message"}
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                    <div className="h-px bg-white/10 w-full my-8"></div>
+                </div>
+            )}
+
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-white">All Skills</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredSkills.map((ad, idx) => (
+                        <motion.div
+                            key={`${ad.userId}-${ad.skill}-${idx}`}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.05, duration: 0.3 }}
+                            className="glass-card p-6 rounded-2xl flex flex-col justify-between group"
+                        >
+                            <div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="px-3 py-1 bg-blue-500/10 text-blue-300 rounded-full text-sm font-medium border border-blue-500/20">
+                                        {ad.skill}
+                                    </span>
+                                </div>
+                                <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
+                                <p className="text-gray-400 text-sm mb-6">
+                                    Is offering to teach <span className="text-blue-300">{ad.skill}</span>.
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <Link href={`/profile/${ad.userId}`} className="flex-1">
+                                    <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
+                                        Profile
+                                    </Button>
+                                </Link>
+                                {ad.userId !== user.uid && (
+                                    <Button
+                                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-md active:scale-95 transition-all"
+                                        onClick={() => handleMessage(ad.userId, ad.userName)}
+                                        disabled={startingChat === ad.userId}
+                                    >
+                                        {startingChat === ad.userId ? "..." : "Message"}
+                                    </Button>
+                                )}
+                            </div>
+                        </motion.div>
+                    ))}
+
+                    {filteredSkills.length === 0 && (
+                        <div className="col-span-full flex flex-col items-center justify-center py-20 glass-panel rounded-2xl border-dashed border-white/20">
+                            <p className="text-gray-400 text-lg mb-4">No matching skills found.</p>
+                            <Link href={`/profile/${user.uid}`}>
+                                <Button className="bg-blue-600 hover:bg-blue-500">Offer a Skill</Button>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -30,7 +30,6 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
 
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="relative overflow-hidden pt-20 pb-32">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0c1121] to-[#0c1121]" />
 
@@ -76,7 +75,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Feature Grid */}
         <section className="py-24 bg-[#0c1121] border-t border-white/5">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
