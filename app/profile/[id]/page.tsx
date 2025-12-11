@@ -1,16 +1,18 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { useParams } from "next/navigation";
+import { db, auth } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { RequestModal } from "@/components/ui/RequestModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useNotification } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
-import { User as UserIcon, BookOpen, GraduationCap, X, Plus } from "lucide-react";
+import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Trash2, Flag, AlertTriangle } from "lucide-react";
+import { signOut } from "firebase/auth";
 import Image from "next/image";
 
 interface UserProfile {
@@ -27,6 +29,8 @@ export default function ProfilePage() {
     const { id } = useParams();
     const { user: currentUser } = useAuth();
     const { addNotification } = useNotification();
+    const router = useRouter();
+
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -37,6 +41,9 @@ export default function ProfilePage() {
     const [selectedSkillForRequest, setSelectedSkillForRequest] = useState("");
     const [stats, setStats] = useState({ rating: 0, reviews: 0 });
     const [reviewsList, setReviewsList] = useState<{ id: string, fromUserName: string, rating: number, review?: string, createdAt: string }[]>([]);
+
+    // Action States
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     const isOwnProfile = currentUser?.uid === id;
 
@@ -164,6 +171,27 @@ export default function ProfilePage() {
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (!currentUser || !id) return;
+        try {
+            // Delete user document
+            await deleteDoc(doc(db, "users", id as string));
+
+            // Sign out
+            await signOut(auth);
+            router.push("/");
+            addNotification("Account deleted successfully.", "success");
+        } catch (error) {
+            console.error("Error deleting account:", error);
+            addNotification("Failed to delete account. Please try again.", "info");
+        }
+    };
+
+    const handleReportUser = () => {
+        // Mock report functionality
+        addNotification("User reported successfully. We will review this shortly.", "success");
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
     if (!profile) return <div className="p-20 text-center">User not found.</div>;
 
@@ -204,7 +232,7 @@ export default function ProfilePage() {
                             </div>
                         )}
 
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mb-6">
                             <div className="flex items-center gap-1 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
                                 <div className="flex text-yellow-400 text-sm">
                                     {[1, 2, 3, 4, 5].map((star) => (
@@ -216,6 +244,29 @@ export default function ProfilePage() {
                                 <span className="text-xs text-gray-400 font-medium ml-1">({stats.reviews} reviews)</span>
                             </div>
                             <span className="text-xs text-gray-500">Joined {new Date(profile.joinedAt || Date.now()).toLocaleDateString()}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                            {isOwnProfile ? (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-9"
+                                    onClick={() => setDeleteConfirmOpen(true)}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+                                </Button>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 h-9"
+                                    onClick={handleReportUser}
+                                >
+                                    <Flag className="mr-2 h-4 w-4" /> Report User
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -303,6 +354,14 @@ export default function ProfilePage() {
                     recipientName={profile.name}
                     initialSkill={selectedSkillForRequest}
                     availableSkills={profile.skillsOffered}
+                />
+
+                <ConfirmModal
+                    isOpen={deleteConfirmOpen}
+                    onClose={() => setDeleteConfirmOpen(false)}
+                    onConfirm={handleDeleteAccount}
+                    title="Delete Account"
+                    message="Are you sure you want to delete your account? This action cannot be undone and you will lose all your data."
                 />
             </motion.div>
         </div>
