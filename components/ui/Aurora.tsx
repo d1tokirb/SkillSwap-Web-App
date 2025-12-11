@@ -119,8 +119,8 @@ interface AuroraProps {
 }
 
 export default function Aurora(props: AuroraProps) {
-    // Purple spectrum: Deep Violet (#4c1d95), Vibrant Indigo (#6366f1), Neon Pink/Purple (#a855f7)
-    const { colorStops = ['#4c1d95', '#6366f1', '#a855f7'], amplitude = 1.0, blend = 0.5, speed = 1.0 } = props;
+    // Blue/Black spectrum: Black (#000000), Navy (#0c1121), Blue (#172554)
+    const { colorStops = ['#000000', '#0c1121', '#172554'], amplitude = 1.0, blend = 0.5, speed = 1.0 } = props;
     const propsRef = useRef(props);
     propsRef.current = props;
 

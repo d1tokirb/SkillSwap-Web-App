@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Code, ChefHat, Languages, Calculator, Music, Palette, Dumbbell, PenTool } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-const skills = [
+const categories = [
     {
         icon: <Code className="h-8 w-8 text-blue-400" />,
         title: "Coding",
@@ -74,15 +74,15 @@ export default function ExplorePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {skills.map((skill, idx) => (
+                    {categories.map((skill, idx) => (
                         <motion.div
                             key={skill.title}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.05 + 0.2 }}
-                            className="bg-card border border-white/10 p-6 rounded-2xl hover:border-indigo-500/50 hover:bg-white/5 transition-all group"
+                            className="glass-card p-6 rounded-2xl hover:border-blue-600/50 hover:bg-[#1a1f33] transition-all group"
                         >
-                            <div className="mb-4 p-3 bg-white/5 rounded-xl w-fit group-hover:scale-110 transition-transform duration-300">
+                            <div className="mb-4 p-3 bg-[#0c1121] rounded-xl w-fit group-hover:scale-110 transition-transform duration-300">
                                 {skill.icon}
                             </div>
                             <h3 className="text-xl font-bold mb-2">{skill.title}</h3>
@@ -98,12 +98,12 @@ export default function ExplorePage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.8 }}
-                        className="mt-16 text-center bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-8 max-w-3xl mx-auto"
+                        className="mt-16 text-center bg-gradient-to-r from-blue-600/10 to-sky-500/10 border border-blue-600/20 rounded-2xl p-8 max-w-3xl mx-auto"
                     >
                         <h2 className="text-2xl font-bold mb-4">Ready to start?</h2>
                         <p className="text-muted-foreground mb-6">Join thousands of students exchanging skills today.</p>
                         <Link href="/register">
-                            <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white border-none">
+                            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white border-none">
                                 Create your Profile
                             </Button>
                         </Link>

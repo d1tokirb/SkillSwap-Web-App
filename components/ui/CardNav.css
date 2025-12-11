@@ -15,22 +15,15 @@
     display: block;
     height: 60px;
     padding: 0;
-    /* User request: bg-purple-400 (approx), opacity-10, backdrop-blur-md, border-gray-100 */
-    background-color: rgba(192, 132, 252, 0.1) !important;
-    /* purple-400 at 10% */
-    backdrop-filter: blur(12px) !important;
-    /* backdrop-blur-md */
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(243, 244, 246, 0.5);
-    /* border-gray-100, slightly transparent */
+    /* Modern Minimal Dark Style */
+    background: #0c1121 !important;
+    /* Extracted Main Color */
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.75rem;
-    background-clip: padding-box;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+    /* Soft, deep shadow */
     position: relative;
     overflow: hidden;
-    /* Hardware acceleration */
-    transform: translateZ(0);
-    will-change: height, backdrop-filter;
 }
 
 .card-nav-top {
@@ -142,12 +135,18 @@
     gap: 8px;
     user-select: none;
 
-    /* Glassmorphism for internal cards */
-    background: rgba(255, 255, 255, 0.03) !important;
-    backdrop-filter: blur(40px) saturate(140%);
-    -webkit-backdrop-filter: blur(40px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    /* Modern Minimal for internal cards */
+    background: #151a2d !important;
+    /* Matches glass-card */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Thin, subtle border */
+    /* No blur, just clean structure */
+    box-shadow: none;
+    transition: background-color 0.2s ease;
+}
+
+.nav-card:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .nav-card-label {

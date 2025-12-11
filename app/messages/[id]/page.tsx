@@ -173,8 +173,8 @@ export default function ChatPage() {
                             >
                                 <div
                                     className={`max-w-[75%] rounded-2xl px-4 py-2 ${isMe
-                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                        : 'bg-white/10 text-foreground rounded-tl-none'
+                                        ? 'bg-blue-600 text-white rounded-tr-none'
+                                        : 'bg-[#1a1f33] text-white rounded-tl-none border border-white/10'
                                         }`}
                                 >
                                     <p>{msg.text}</p>
@@ -189,7 +189,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Input area */}
-                <form onSubmit={sendMessage} className="p-4 bg-white/5 border-t border-white/10 flex gap-2">
+                <form onSubmit={sendMessage} className="p-4 bg-[#0c1121] border-t border-white/10 flex gap-2">
                     <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}

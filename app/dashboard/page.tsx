@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Search, Plus } from "lucide-react";
-import { Input } from "@/components/ui/Input";
 
 export default function Dashboard() {
     const { user, loading } = useAuth();
@@ -102,17 +101,18 @@ export default function Dashboard() {
                     <p className="text-gray-400">Find skills to teach or learn.</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
+                    <div className="relative flex-1 sm:w-auto">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <input
+                            type="text"
                             placeholder="Search skills..."
-                            className="pl-9 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-indigo-500/50 focus:ring-indigo-500/20"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full h-10 rounded-lg pl-9 bg-[#151a2d] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-600"
                         />
                     </div>
                     <Link href={`/profile/${user.uid}`}>
-                        <Button className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 shadow-[0_0_15px_rgba(79,70,229,0.3)]">
+                        <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0">
                             <Plus className="mr-2 h-4 w-4" /> Post
                         </Button>
                     </Link>
@@ -131,24 +131,24 @@ export default function Dashboard() {
                     >
                         <div>
                             <div className="flex justify-between items-start mb-4">
-                                <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-sm font-medium border border-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.1)]">
+                                <span className="px-3 py-1 bg-blue-500/10 text-blue-300 rounded-full text-sm font-medium border border-blue-500/20">
                                     {ad.skill}
                                 </span>
                             </div>
                             <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
                             <p className="text-gray-400 text-sm mb-6">
-                                Is offering to teach <span className="text-indigo-300">{ad.skill}</span>.
+                                Is offering to teach <span className="text-blue-300">{ad.skill}</span>.
                             </p>
                         </div>
                         <div className="flex gap-3">
                             <Link href={`/profile/${ad.userId}`} className="flex-1">
-                                <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 hover:text-white text-gray-300">
+                                <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
                                     Profile
                                 </Button>
                             </Link>
                             {ad.userId !== user.uid && (
                                 <Button
-                                    className="flex-1 bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-sm"
+                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-md active:scale-95 transition-all"
                                     onClick={() => handleMessage(ad.userId, ad.userName)}
                                     disabled={startingChat === ad.userId}
                                 >
@@ -163,7 +163,7 @@ export default function Dashboard() {
                     <div className="col-span-full flex flex-col items-center justify-center py-20 glass-panel rounded-2xl border-dashed border-white/20">
                         <p className="text-gray-400 text-lg mb-4">No matching skills found.</p>
                         <Link href={`/profile/${user.uid}`}>
-                            <Button className="bg-indigo-600 hover:bg-indigo-500">Offer a Skill</Button>
+                            <Button className="bg-blue-600 hover:bg-blue-500">Offer a Skill</Button>
                         </Link>
                     </div>
                 )}

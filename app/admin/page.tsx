@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -104,10 +104,10 @@ export default function AdminPage() {
 
             {view === "reports" ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-card border border-white/10 p-6 rounded-xl">
+                    <div className="glass-card border-white/10 p-6 rounded-xl">
                         <div className="flex items-center gap-4 mb-2">
-                            <div className="p-3 bg-blue-500/20 rounded-lg text-blue-400">
-                                <Users className="h-6 w-6" />
+                            <div className="p-3 bg-blue-600/10 rounded-lg">
+                                <Users className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
                                 <p className="text-muted-foreground text-sm">Total Users</p>
@@ -115,9 +115,9 @@ export default function AdminPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="bg-card border border-white/10 p-6 rounded-xl">
+                    <div className="glass-card border-white/10 p-6 rounded-xl">
                         <div className="flex items-center gap-4 mb-2">
-                            <div className="p-3 bg-green-500/20 rounded-lg text-green-400">
+                            <div className="p-3 bg-green-500/10 rounded-lg text-green-400">
                                 <Calendar className="h-6 w-6" />
                             </div>
                             <div>
@@ -127,7 +127,7 @@ export default function AdminPage() {
                         </div>
                     </div>
 
-                    <div className="col-span-full md:col-span-3 bg-card border border-white/10 p-6 rounded-xl">
+                    <div className="col-span-full md:col-span-3 glass-card border-white/10 p-6 rounded-xl">
                         <h3 className="text-xl font-bold mb-4">Top Offered Skills</h3>
                         <div className="space-y-4">
                             {stats.topSkills.map((skill, idx) => (
@@ -140,7 +140,7 @@ export default function AdminPage() {
                                         </div>
                                         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-indigo-500"
+                                                className="h-full bg-blue-500"
                                                 style={{ width: `${(skill.count / stats.totalUsers) * 100}%` }}
                                             />
                                         </div>
@@ -154,18 +154,18 @@ export default function AdminPage() {
             ) : (
                 <div className="bg-card border border-white/10 rounded-xl overflow-hidden">
                     <table className="w-full text-left">
-                        <thead className="bg-white/5 border-b border-white/10">
+                        <thead className="bg-[#151a2d] border-b border-white/10">
                             <tr>
-                                <th className="p-4">Name</th>
-                                <th className="p-4">Email</th>
-                                <th className="p-4">Role</th>
-                                <th className="p-4">Joined</th>
-                                <th className="p-4 text-right">Actions</th>
+                                <th className="p-4 text-left font-semibold text-gray-300">Name</th>
+                                <th className="p-4 text-left font-semibold text-gray-300">Email</th>
+                                <th className="p-4 text-left font-semibold text-gray-300">Role</th>
+                                <th className="p-4 text-left font-semibold text-gray-300">Joined</th>
+                                <th className="p-4 text-right font-semibold text-gray-300">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
                             {users.map((u) => (
-                                <tr key={u.id} className="hover:bg-white/5">
+                                <tr key={u.id} className="hover:bg-[#1a1f33] transition-colors">
                                     <td className="p-4 font-medium">{u.name}</td>
                                     <td className="p-4 text-muted-foreground">{u.email}</td>
                                     <td className="p-4 capitalize">{u.role}</td>

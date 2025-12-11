@@ -47,7 +47,7 @@ export default function MessagesPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
             <h1 className="text-3xl font-bold mb-8">Messages</h1>
 
-            <div className="bg-card border border-white/10 rounded-xl overflow-hidden min-h-[400px]">
+            <div className="glass-card border border-white/10 rounded-xl overflow-hidden min-h-[400px]">
                 {conversations.length === 0 ? (
                     <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
                         <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
@@ -65,12 +65,12 @@ export default function MessagesPage() {
                                 <Link
                                     key={convo.id}
                                     href={`/messages/${convo.id}`}
-                                    className="block p-4 hover:bg-white/5 transition-colors"
+                                    className="block p-4 hover:bg-[#1a1f33] transition-colors"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                                                <span className="font-bold text-white">{otherUserName.charAt(0)}</span>
+                                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
+                                                <span>{otherUserName.charAt(0)}</span>
                                             </div>
                                             <div>
                                                 <h3 className="font-medium">{otherUserName}</h3>

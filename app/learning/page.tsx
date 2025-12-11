@@ -96,46 +96,47 @@ export default function LearningPage() {
                 <p className="text-muted-foreground">Track skills you are requesting to learn.</p>
             </div>
 
-            {/* My Learning (Sent Requests) */}
-            {/* Active Learning (In Progress) */}
+            {/* In Progress Section */}
             <div className="space-y-6">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                    In Progress <span className="text-sm font-normal text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">{sentRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').length}</span>
+                    In Progress <span className="text-sm font-normal text-muted-foreground bg-slate-800 border border-white/10 px-2 py-0.5 rounded-full">{sentRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').length}</span>
                 </h2>
                 {sentRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').length === 0 ? (
                     <p className="text-muted-foreground italic">No active learning sessions.</p>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {sentRequests.filter(r => r.status !== 'completed' && r.status !== 'rejected').map((req) => (
-                            <div key={req.id} className="glass-card p-5 rounded-xl flex flex-col justify-between">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
-                                            {req.toUserName?.charAt(0)}
+                            <div key={req.id} className="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
+                                                {req.toUserName?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-sm text-white">To: {req.toUserName}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {new Date(req.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-sm text-white">To: {req.toUserName}</p>
-                                            <p className="text-xs text-gray-400">
-                                                {new Date(req.createdAt).toLocaleDateString()}
-                                            </p>
+                                        <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
+                                            {req.status}
                                         </div>
                                     </div>
-                                    <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                        req.status === 'accepted' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                            req.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                                'bg-red-500/10 text-red-400 border-red-500/20'
-                                        }`}>
-                                        {req.status}
-                                    </div>
+                                    <p className="text-sm mb-4 text-gray-300">
+                                        Learning <span className="font-medium text-sky-300">{req.skill}</span>
+                                    </p>
                                 </div>
-                                <p className="text-sm mb-4 text-gray-300">
-                                    Learning <span className="font-medium text-pink-300">{req.skill}</span>
-                                </p>
-
                                 <div className="mt-auto">
                                     <div className="text-center text-xs text-gray-400 py-2">
                                         {req.status === 'pending' ? 'Waiting for acceptance...' : 'Session in progress...'}
                                     </div>
+                                    {req.status === 'accepted' && (
+                                        <Button className="w-full mt-2 bg-blue-600 hover:bg-blue-700 border-0">
+                                            Open Chat
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -143,38 +144,38 @@ export default function LearningPage() {
                 )}
             </div>
 
-            {/* Completed Learning (History & Reviews) */}
+            {/* History Section */}
             <div className="space-y-6 pt-8 border-t border-white/10">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                    Learning History <span className="text-sm font-normal text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">{sentRequests.filter(r => r.status === 'completed' || r.status === 'rejected').length}</span>
+                    Learning History <span className="text-sm font-normal text-muted-foreground bg-slate-800 border border-white/10 px-2 py-0.5 rounded-full">{sentRequests.filter(r => r.status === 'completed' || r.status === 'rejected').length}</span>
                 </h2>
                 {sentRequests.filter(r => r.status === 'completed' || r.status === 'rejected').length === 0 ? (
                     <p className="text-muted-foreground italic">No completed sessions yet.</p>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {sentRequests.filter(r => r.status === 'completed' || r.status === 'rejected').map((req) => (
-                            <div key={req.id} className="glass-card p-5 rounded-xl opacity-80 hover:opacity-100 transition-all flex flex-col">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
-                                            {req.toUserName?.charAt(0)}
+                            <div key={req.id} className="glass-card p-6 rounded-2xl flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10">
+                                                {req.toUserName?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-sm text-white">To: {req.toUserName}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {new Date(req.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-sm text-white">To: {req.toUserName}</p>
-                                            <p className="text-xs text-gray-400">
-                                                {new Date(req.createdAt).toLocaleDateString()}
-                                            </p>
+                                        <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'completed' ? 'bg-blue-600/10 text-blue-600 border-blue-600/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                            {req.status}
                                         </div>
                                     </div>
-                                    <div className={`text-xs px-2 py-1 rounded-full border capitalize ${req.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                        'bg-red-500/10 text-red-400 border-red-500/20'
-                                        }`}>
-                                        {req.status}
-                                    </div>
+                                    <p className="text-sm mb-4 text-gray-300">
+                                        Learned <span className="font-medium text-sky-300">{req.skill}</span>
+                                    </p>
                                 </div>
-                                <p className="text-sm mb-4 text-gray-300">
-                                    Learned <span className="font-medium text-pink-300">{req.skill}</span>
-                                </p>
 
                                 <div className="mt-auto">
                                     {req.status === "completed" && !req.rating ? (
@@ -182,7 +183,7 @@ export default function LearningPage() {
                                             Rate Session
                                         </Button>
                                     ) : req.rating ? (
-                                        <div className="bg-black/20 rounded-lg p-2 text-center border border-white/5">
+                                        <div className="bg-[#0c1121] rounded-lg p-2 text-center border border-white/10">
                                             <div className="flex justify-center text-yellow-500 gap-1 text-sm">
                                                 {[...Array(5)].map((_, i) => (
                                                     <span key={i} className={i < (req.rating || 0) ? "" : "text-white/20"}>★</span>
@@ -201,6 +202,7 @@ export default function LearningPage() {
                     </div>
                 )}
             </div>
+
             <RatingModal
                 isOpen={ratingModalOpen}
                 onClose={() => setRatingModalOpen(false)}

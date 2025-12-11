@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/Input";
 import { RequestModal } from "@/components/ui/RequestModal";
 import { motion } from "framer-motion";
 import { User as UserIcon, BookOpen, GraduationCap, X, Plus } from "lucide-react";
+import Image from "next/image";
 
 interface UserProfile {
     name: string;
     email: string;
     role: string;
+    photoURL?: string;
     skillsOffered: string[];
     skillsSought: string[];
     joinedAt: string;
@@ -25,6 +27,8 @@ export default function ProfilePage() {
     const { user: currentUser } = useAuth();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
     const [newSkillOffered, setNewSkillOffered] = useState("");
     const [newSkillSought, setNewSkillSought] = useState("");
     const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -149,7 +153,7 @@ export default function ProfilePage() {
                 skill: skill,
                 status: "pending",
                 createdAt: new Date().toISOString(),
-                note: note // If we want to save the note
+                note: note
             });
             alert("Request sent successfully!");
         } catch (err) {
@@ -158,7 +162,7 @@ export default function ProfilePage() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
     if (!profile) return <div className="p-20 text-center">User not found.</div>;
 
     return (
@@ -166,23 +170,37 @@ export default function ProfilePage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-panel rounded-3xl p-8 sm:p-10 shadow-2xl backdrop-blur-xl"
+                className="glass-panel rounded-3xl px-8 sm:px-10 pt-24 pb-8 sm:pb-10 shadow-[8px_8px_0px_0px_#ffffff]"
             >
-                <div className="flex flex-col sm:flex-row items-center gap-8 mb-10">
-                    <div className="relative">
-                        <div className="h-32 w-32 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-5xl font-bold text-white shadow-[0_0_30px_rgba(99,102,241,0.3)] border-4 border-white/5">
-                            {profile.name.charAt(0)}
-                        </div>
-                        <div className="absolute -bottom-2 -right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full border border-white/10 backdrop-blur-md">
-                            {profile.role}
+                <div className="flex flex-col md:flex-row gap-8 items-start mb-12">
+                    <div className="relative group">
+                        <div
+                            className={`h-32 w-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-4xl font-bold text-white shadow-inner relative`}
+                        >
+                            {profile.photoURL ? (
+                                <Image
+                                    src={profile.photoURL}
+                                    alt={profile.name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            ) : (
+                                profile.name?.charAt(0)
+                            )}
                         </div>
                     </div>
 
                     <div className="text-center sm:text-left flex-1">
                         <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">{profile.name}</h1>
-                        <p className="text-indigo-300 font-medium mb-3 flex items-center justify-center sm:justify-start gap-2 capitalize">
+                        <p className="text-blue-300 font-medium mb-3 flex items-center justify-center sm:justify-start gap-2 capitalize">
                             {profile.role || "Community Member"}
                         </p>
+
+                        {errorMessage && (
+                            <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-sm px-3 py-2 rounded-lg mb-3">
+                                {errorMessage}
+                            </div>
+                        )}
 
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
                             <div className="flex items-center gap-1 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
@@ -204,18 +222,18 @@ export default function ProfilePage() {
                     {/* Skills Offered */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-xl font-bold text-white">
-                            <span className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400"><GraduationCap className="h-5 w-5" /></span>
+                            <span className="p-2 bg-blue-600/10 rounded-lg text-blue-600"><GraduationCap className="h-5 w-5" /></span>
                             Skills Offered
                         </div>
                         <div className="glass-card rounded-2xl p-5 min-h-[220px]">
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {profile.skillsOffered?.map((skill, idx) => (
-                                    <span key={idx} className="px-3 py-1.5 bg-indigo-500/10 text-indigo-300 rounded-lg text-sm border border-indigo-500/20 font-medium flex items-center gap-2 hover:bg-indigo-500/20 transition-colors">
+                                    <span key={idx} className="px-3 py-1.5 bg-blue-600/10 text-blue-300 rounded-lg text-sm border border-blue-600/20 font-medium flex items-center gap-2 hover:bg-blue-600/20 transition-colors">
                                         {skill}
                                         {isOwnProfile ? (
-                                            <button onClick={() => removeSkill("offered", skill)} className="text-indigo-400/50 hover:text-indigo-300"><X className="h-3 w-3" /></button>
+                                            <button onClick={() => removeSkill("offered", skill)} className="text-blue-400/50 hover:text-blue-300"><X className="h-3 w-3" /></button>
                                         ) : (
-                                            <button onClick={() => openRequestModal(skill)} className="text-xs bg-indigo-600/30 hover:bg-indigo-600 px-2 py-0.5 rounded text-white transition-colors">
+                                            <button onClick={() => openRequestModal(skill)} className="text-xs bg-blue-600/30 hover:bg-blue-600 px-2 py-0.5 rounded text-white transition-colors">
                                                 Request
                                             </button>
                                         )}
@@ -227,12 +245,12 @@ export default function ProfilePage() {
                                 <div className="flex gap-2">
                                     <Input
                                         placeholder="Add a skill you can teach..."
-                                        className="bg-black/30 border-white/10 text-white placeholder:text-gray-600 focus:border-indigo-500/50 h-9 text-sm"
+                                        className="bg-black/30 border-white/10 text-white placeholder:text-gray-600 focus:border-blue-600/50 h-9 text-sm"
                                         value={newSkillOffered}
                                         onChange={(e) => setNewSkillOffered(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && addSkill("offered")}
                                     />
-                                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 h-9 w-9 p-0" onClick={() => addSkill("offered")}>
+                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-500 h-9 w-9 p-0" onClick={() => addSkill("offered")}>
                                         <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -243,16 +261,16 @@ export default function ProfilePage() {
                     {/* Skills Sought */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-xl font-bold text-white">
-                            <span className="p-2 bg-pink-500/10 rounded-lg text-pink-400"><BookOpen className="h-5 w-5" /></span>
+                            <span className="p-2 bg-sky-500/10 rounded-lg text-sky-400"><BookOpen className="h-5 w-5" /></span>
                             Skills Wanted
                         </div>
                         <div className="glass-card rounded-2xl p-5 min-h-[220px]">
                             <div className="flex flex-wrap gap-2 mb-6">
                                 {profile.skillsSought?.map((skill, idx) => (
-                                    <span key={idx} className="px-3 py-1.5 bg-pink-500/10 text-pink-300 rounded-lg text-sm border border-pink-500/20 font-medium flex items-center gap-2 hover:bg-pink-500/20 transition-colors">
+                                    <span key={idx} className="px-3 py-1.5 bg-sky-500/10 text-sky-300 rounded-lg text-sm border border-sky-500/20 font-medium flex items-center gap-2 hover:bg-sky-500/20 transition-colors">
                                         {skill}
                                         {isOwnProfile && (
-                                            <button onClick={() => removeSkill("sought", skill)} className="text-pink-400/50 hover:text-pink-300"><X className="h-3 w-3" /></button>
+                                            <button onClick={() => removeSkill("sought", skill)} className="text-sky-400/50 hover:text-sky-300"><X className="h-3 w-3" /></button>
                                         )}
                                     </span>
                                 ))}
@@ -262,12 +280,12 @@ export default function ProfilePage() {
                                 <div className="flex gap-2">
                                     <Input
                                         placeholder="Add a skill you want to learn..."
-                                        className="bg-black/30 border-white/10 text-white placeholder:text-gray-600 focus:border-pink-500/50 h-9 text-sm"
+                                        className="bg-black/30 border-white/10 text-white placeholder:text-gray-600 focus:border-sky-500/50 h-9 text-sm"
                                         value={newSkillSought}
                                         onChange={(e) => setNewSkillSought(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && addSkill("sought")}
                                     />
-                                    <Button size="sm" className="bg-pink-600 hover:bg-pink-500 h-9 w-9 p-0" onClick={() => addSkill("sought")}>
+                                    <Button size="sm" className="bg-sky-600 hover:bg-sky-500 h-9 w-9 p-0" onClick={() => addSkill("sought")}>
                                         <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>

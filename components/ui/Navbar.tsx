@@ -24,7 +24,7 @@ export function Navbar() {
     const loggedInItems = [
         {
             label: "Discover",
-            bgColor: "#312e81", // Indigo 900
+            bgColor: "#151a2d", // Matching card color
             textColor: "#e0e7ff",
             links: [
                 { label: "Community Feed", href: "/dashboard", ariaLabel: "Go to Dashboard" }
@@ -32,7 +32,7 @@ export function Navbar() {
         },
         {
             label: "Activity",
-            bgColor: "#4c1d95", // Violet 900
+            bgColor: "#1e243d", // Slightly lighter for contrast
             textColor: "#f3e8ff",
             links: [
                 { label: "Teaching Requests", href: "/requests", ariaLabel: "View Requests" },
@@ -42,7 +42,7 @@ export function Navbar() {
         },
         {
             label: "Account",
-            bgColor: "#0f172a", // Slate 900
+            bgColor: "#0c1121", // Main bg color
             textColor: "#f8fafc",
             links: [
                 { label: "My Profile", href: user ? `/profile/${user.uid}` : "#", ariaLabel: "View Profile" },
@@ -54,7 +54,7 @@ export function Navbar() {
     const loggedOutItems = [
         {
             label: "Product",
-            bgColor: "#0f172a",
+            bgColor: "#0c1121",
             textColor: "#f8fafc",
             links: [
                 { label: "Features", href: "/#features", ariaLabel: "Features" },
@@ -63,7 +63,7 @@ export function Navbar() {
         },
         {
             label: "Join",
-            bgColor: "#312e81",
+            bgColor: "#151a2d",
             textColor: "#e0e7ff",
             links: [
                 { label: "Log In", href: "/login", ariaLabel: "Log In" },

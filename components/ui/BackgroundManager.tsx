@@ -9,11 +9,15 @@ export default function BackgroundManager() {
     const isMainPage = pathname === "/";
 
     if (isMainPage) {
-        return <DarkVeil />;
+        return (
+            <div className="fixed inset-0 -z-10" style={{ backgroundColor: "#0c1121" }}>
+                <Aurora speed={0.3} amplitude={1.2} />
+            </div>
+        );
     }
 
     return (
-        <div className="fixed inset-0 -z-10" style={{ backgroundColor: "#0a0118" }}>
+        <div className="fixed inset-0 -z-10" style={{ backgroundColor: "#0c1121" }}>
             <Aurora speed={0.5} />
         </div>
     );

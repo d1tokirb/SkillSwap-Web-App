@@ -23,7 +23,7 @@ export default function Home() {
 
   const item = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
+    visible: { opacity: 1, y: 0 },
   };
 
   return (
@@ -32,20 +32,27 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-20 pb-32">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-background to-background" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0c1121] to-[#0c1121]" />
 
-          <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <motion.div
-              variants={container}
               initial="hidden"
-              animate="show"
-              className="max-w-3xl mx-auto space-y-8"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { staggerChildren: 0.2 }
+                }
+              }}
+              className="max-w-4xl mx-auto space-y-8"
             >
               <motion.h1
                 variants={item}
                 className="text-4xl sm:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent"
               >
-                Master New Skills through <span className="text-indigo-500">Peer Exchange</span>
+                Master New Skills through <span className="text-blue-600">Peer Exchange</span>
               </motion.h1>
 
               <motion.p
@@ -70,21 +77,21 @@ export default function Home() {
         </section>
 
         {/* Feature Grid */}
-        <section className="py-24 bg-white/5 border-t border-white/5">
+        <section className="py-24 bg-[#0c1121] border-t border-white/5">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FeatureCard
-                icon={<BookOpen className="h-8 w-8 text-indigo-500" />}
+                icon={<BookOpen className="h-8 w-8 text-blue-500" />}
                 title="Diverse Skills"
                 description="From coding to cooking, find an expert in whatever you want to learn."
               />
               <FeatureCard
-                icon={<Users className="h-8 w-8 text-violet-500" />}
+                icon={<Users className="h-8 w-8 text-sky-500" />}
                 title="Community First"
                 description="Built for students, by students. safe, friendly, and focused on growth."
               />
               <FeatureCard
-                icon={<Star className="h-8 w-8 text-pink-500" />}
+                icon={<Star className="h-8 w-8 text-cyan-500" />}
                 title="Rated Quality"
                 description="Trust our rating system to find the best mentors and reliable peers."
               />
