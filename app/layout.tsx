@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/ui/Navbar";
 import BackgroundManager from "@/components/ui/BackgroundManager";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen relative text-white bg-transparent`}
       >
         <AuthProvider>
-          <BackgroundManager />
-          <Navbar />
-          <div className="relative z-10 pt-24">
-            {children}
-          </div>
+          <NotificationProvider>
+            <BackgroundManager />
+            <Navbar />
+            <div className="relative z-10 pt-24">
+              {children}
+            </div>
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

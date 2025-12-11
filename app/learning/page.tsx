@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { RatingModal } from "@/components/ui/RatingModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface RequestWithId {
     id: string;
@@ -28,6 +29,9 @@ export default function LearningPage() {
     const [fetching, setFetching] = useState(true);
     const [ratingModalOpen, setRatingModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<RequestWithId | null>(null);
+
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [pendingStopId, setPendingStopId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -88,14 +92,19 @@ export default function LearningPage() {
         router.push(`/messages/${convoId}`);
     };
 
-    const handleStopSession = async (requestId: string) => {
-        if (!confirm("Are you sure you want to end this session? It will be moved to your history.")) return;
+    const requestStopSession = (requestId: string) => {
+        setPendingStopId(requestId);
+        setConfirmModalOpen(true);
+    };
+
+    const confirmStopSession = async () => {
+        if (!pendingStopId) return;
         try {
-            await updateDoc(doc(db, "requests", requestId), {
+            await updateDoc(doc(db, "requests", pendingStopId), {
                 status: "completed",
                 completedAt: new Date().toISOString()
             });
-            setSentRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: "completed" } : r));
+            setSentRequests(prev => prev.map(r => r.id === pendingStopId ? { ...r, status: "completed" } : r));
         } catch (error) {
             console.error("Error ending session:", error);
         }
@@ -163,7 +172,7 @@ export default function LearningPage() {
                                             <Button
                                                 variant="outline"
                                                 className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                                                onClick={() => handleStopSession(req.id)}
+                                                onClick={() => requestStopSession(req.id)}
                                             >
                                                 End Session
                                             </Button>
@@ -240,6 +249,14 @@ export default function LearningPage() {
                 onClose={() => setRatingModalOpen(false)}
                 onSubmit={handleRatingSubmit}
                 userName={selectedRequest?.toUserName || "User"}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModalOpen}
+                onClose={() => setConfirmModalOpen(false)}
+                onConfirm={confirmStopSession}
+                title="End Session"
+                message="Are you sure you want to end this session? It will be moved to your history."
             />
         </div>
     );
