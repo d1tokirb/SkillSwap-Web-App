@@ -8,9 +8,14 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Trash2, TrendingUp, Users, Calendar } from "lucide-react";
 
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useNotification } from "@/context/NotificationContext";
+
 export default function AdminPage() {
     const { user, role, loading } = useAuth();
     const router = useRouter();
+    const { addNotification } = useNotification();
+
     const [users, setUsers] = useState<any[]>([]);
     const [stats, setStats] = useState({
         totalUsers: 0,
@@ -18,6 +23,10 @@ export default function AdminPage() {
         topSkills: [] as { name: string; count: number }[]
     });
     const [view, setView] = useState<"users" | "reports">("users");
+
+    // Modal State
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (!loading) {
@@ -69,15 +78,21 @@ export default function AdminPage() {
         }
     };
 
-    const handleDeleteUser = async (userId: string) => {
-        if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
+    const requestDeleteUser = (userId: string) => {
+        setUserToDelete(userId);
+        setConfirmOpen(true);
+    };
+
+    const confirmDeleteUser = async () => {
+        if (!userToDelete) return;
+
         try {
-            await deleteDoc(doc(db, "users", userId));
-            setUsers(users.filter(u => u.id !== userId));
-            // In a real app, also delete Auth user via Admin SDK/Edge Function
+            await deleteDoc(doc(db, "users", userToDelete));
+            setUsers(users.filter(u => u.id !== userToDelete));
+            addNotification("User deleted successfully", "success");
         } catch (err) {
             console.error(err);
-            alert("Failed to delete user document.");
+            addNotification("Failed to delete user document.", "info");
         }
     };
 
@@ -178,7 +193,7 @@ export default function AdminPage() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/20"
-                                                onClick={() => handleDeleteUser(u.id)}
+                                                onClick={() => requestDeleteUser(u.id)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -190,6 +205,14 @@ export default function AdminPage() {
                     </table>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={confirmDeleteUser}
+                title="Delete User"
+                message="Are you sure you want to delete this user? This cannot be undone."
+            />
         </div>
     );
 }

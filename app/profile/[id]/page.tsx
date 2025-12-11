@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { RequestModal } from "@/components/ui/RequestModal";
+import { useNotification } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
 import { User as UserIcon, BookOpen, GraduationCap, X, Plus } from "lucide-react";
 import Image from "next/image";
@@ -25,6 +26,7 @@ interface UserProfile {
 export default function ProfilePage() {
     const { id } = useParams();
     const { user: currentUser } = useAuth();
+    const { addNotification } = useNotification();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -155,10 +157,10 @@ export default function ProfilePage() {
                 createdAt: new Date().toISOString(),
                 note: note
             });
-            alert("Request sent successfully!");
+            addNotification("Request sent successfully!", "success");
         } catch (err) {
             console.error("Error sending request", err);
-            alert("Failed to send request.");
+            addNotification("Failed to send request.", "info");
         }
     };
 

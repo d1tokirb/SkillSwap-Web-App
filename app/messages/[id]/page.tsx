@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Send, ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
 import { RequestModal } from "@/components/ui/RequestModal";
+import { useNotification } from "@/context/NotificationContext";
 
 interface Message {
     id: string;
@@ -21,6 +22,7 @@ interface Message {
 export default function ChatPage() {
     const { id } = useParams(); // conversation ID
     const { user } = useAuth();
+    const { addNotification } = useNotification();
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [otherUserName, setOtherUserName] = useState("Chat");
@@ -108,7 +110,7 @@ export default function ChatPage() {
             }
 
             if (!toUserId) {
-                alert("Could not determine recipient.");
+                addNotification("Could not determine recipient.", "info");
                 return;
             }
 
@@ -122,7 +124,7 @@ export default function ChatPage() {
                 createdAt: new Date().toISOString(),
                 note: note
             });
-            alert("Request sent successfully!");
+            addNotification("Request sent successfully!", "success");
 
             // Automatically send a message about the request
             const autoMsg = `I just sent a request to learn ${skill}!`;
@@ -138,7 +140,7 @@ export default function ChatPage() {
 
         } catch (err) {
             console.error("Error sending request", err);
-            alert("Failed to send request.");
+            addNotification("Failed to send request.", "info");
         }
     };
 
