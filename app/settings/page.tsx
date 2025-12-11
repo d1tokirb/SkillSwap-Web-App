@@ -15,7 +15,11 @@ import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 
 export default function SettingsPage() {
-    const { reduceMotion, toggleReduceMotion } = useSettings();
+    const {
+        reduceMotion, toggleReduceMotion,
+        pushNotifications, togglePushNotifications,
+        privacyMode, togglePrivacyMode
+    } = useSettings();
     const { user } = useAuth();
     const router = useRouter();
     const { addNotification } = useNotification();
@@ -61,6 +65,49 @@ export default function SettingsPage() {
                             >
                                 <EyeOff className="mr-2 h-4 w-4" />
                                 {reduceMotion ? "Motion Reduced" : "Reduce Motion"}
+                            </Button>
+                        </div>
+                    </section>
+
+                    {/* Notifications */}
+                    <section className="glass-panel p-6 rounded-2xl border border-white/10 mb-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <Bell className="h-5 w-5" /> Notifications
+                        </h2>
+                        <div className="space-y-4">
+
+                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                                <div>
+                                    <h3 className="font-medium">Push Notifications</h3>
+                                    <p className="text-sm text-gray-400">Get alerted about new messages.</p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    onClick={togglePushNotifications}
+                                    className={`border-white/10 hover:bg-white/5 ${pushNotifications ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' : 'text-gray-400'}`}
+                                >
+                                    {pushNotifications ? "Enabled" : "Disabled"}
+                                </Button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Privacy */}
+                    <section className="glass-panel p-6 rounded-2xl border border-white/10 mb-6">
+                        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                            <Shield className="h-5 w-5" /> Privacy
+                        </h2>
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                            <div>
+                                <h3 className="font-medium">Private Profile</h3>
+                                <p className="text-sm text-gray-400">Hide your profile from search results.</p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={togglePrivacyMode}
+                                className={`border-white/10 hover:bg-white/5 ${privacyMode ? 'bg-green-600/20 text-green-400 border-green-500/30' : 'text-gray-400'}`}
+                            >
+                                {privacyMode ? "Private" : "Public"}
                             </Button>
                         </div>
                     </section>
