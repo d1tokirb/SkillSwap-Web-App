@@ -3,50 +3,70 @@
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Code, ChefHat, Languages, Calculator, Music, Palette, Dumbbell, PenTool } from "lucide-react";
+import { Code, ChefHat, Languages, Calculator, Music, Palette, Dumbbell, PenTool, Rocket, Briefcase, Cpu, Camera } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const categories = [
     {
         icon: <Code className="h-8 w-8 text-blue-400" />,
         title: "Coding",
-        description: "Learn Python, React, or debug code with a peer. Share screens and solve problems together.",
+        description: "Learn Python, React, JavaScript, or debug code with a peer. Share screens and solve problems together.",
     },
     {
         icon: <ChefHat className="h-8 w-8 text-orange-400" />,
         title: "Cooking",
-        description: "Master new recipes. Swap family secrets and learn culinary techniques over video chat.",
+        description: "Master new recipes from around the world. Swap family secrets and learn culinary techniques over video.",
     },
     {
         icon: <Languages className="h-8 w-8 text-green-400" />,
         title: "Languages",
-        description: "Practice conversation. Connect with native speakers to improve your fluency and accent.",
+        description: "Practice conversation. Connect with native speakers to improve your fluency in Spanish, French, Mandarin, and more.",
     },
     {
         icon: <Calculator className="h-8 w-8 text-red-400" />,
         title: "Mathematics",
-        description: "Get help with calculus homework or understand complex theorems with a study buddy.",
+        description: "Get help with calculus, algebra, or statistics. Understand complex theorems with a patient study buddy.",
     },
     {
         icon: <Music className="h-8 w-8 text-purple-400" />,
         title: "Music",
-        description: "Learn guitar chords, piano basics, or music theory. Jam together and share feedback.",
+        description: "Learn guitar chords, piano basics, or music theory. Jam together and share feedback on your compositions.",
     },
     {
         icon: <Palette className="h-8 w-8 text-pink-400" />,
         title: "Design",
-        description: "Get feedback on your portfolio. Learn tools like Figma or Photoshop from experienced peers.",
+        description: "Get feedback on your portfolio. Learn tools like Figma, Photoshop, or Blender from experienced creative peers.",
     },
     {
         icon: <Dumbbell className="h-8 w-8 text-yellow-400" />,
         title: "Fitness",
-        description: "Find a workout partner. Share routines, check form, and stay motivated together.",
+        description: "Find a workout partner. Share routines, check form, and stay motivated for yoga, running, or lifting.",
     },
     {
         icon: <PenTool className="h-8 w-8 text-teal-400" />,
         title: "Writing",
-        description: "Edit essays, brainstorm story ideas, or get critiques on your creative writing.",
+        description: "Edit essays, brainstorm story ideas, or get critiques on your creative writing and poetry.",
     },
+    {
+        icon: <Rocket className="h-8 w-8 text-indigo-400" />,
+        title: "Science",
+        description: "Explore physics, chemistry, or biology. Discuss scientific concepts and work on lab reports together.",
+    },
+    {
+        icon: <Briefcase className="h-8 w-8 text-amber-500" />,
+        title: "Business",
+        description: "Learn about entrepreneurship, marketing, or finance. Get advice on starting your own project or small business.",
+    },
+    {
+        icon: <Cpu className="h-8 w-8 text-cyan-400" />,
+        title: "Technology",
+        description: "Dive into hardware, networking, or cybersecurity. Understand how computers work and build your own systems.",
+    },
+    {
+        icon: <Camera className="h-8 w-8 text-rose-400" />,
+        title: "Photography",
+        description: "Learn about composition, lighting, and editing. Share your photos and get constructive feedback.",
+    }
 ];
 
 export default function ExplorePage() {

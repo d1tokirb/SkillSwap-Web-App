@@ -117,6 +117,8 @@ export default function AdminPage() {
                 </Button>
             </div>
 
+
+
             {view === "reports" ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="glass-card border-white/10 p-6 rounded-xl">

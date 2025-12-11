@@ -26,6 +26,7 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [otherUserName, setOtherUserName] = useState("Chat");
+    const [otherUserId, setOtherUserId] = useState("");
     const [otherUserSkills, setOtherUserSkills] = useState<string[]>([]);
     const [requestModalOpen, setRequestModalOpen] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -39,11 +40,12 @@ export default function ChatPage() {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                const otherUserId = data.participants.find((uid: string) => uid !== user.uid);
-                if (otherUserId && data.participantNames) {
-                    setOtherUserName(data.participantNames[otherUserId] || "User");
+                const oUid = data.participants.find((uid: string) => uid !== user.uid);
+                if (oUid && data.participantNames) {
+                    setOtherUserName(data.participantNames[oUid] || "User");
+                    setOtherUserId(oUid);
                     // Fetch other user's skills for request modal
-                    const userDoc = await getDoc(doc(db, "users", otherUserId));
+                    const userDoc = await getDoc(doc(db, "users", oUid));
                     if (userDoc.exists()) {
                         setOtherUserSkills(userDoc.data().skillsOffered || []);
                     }
@@ -52,7 +54,7 @@ export default function ChatPage() {
         };
         fetchConvoDetails();
 
-        // Listen for messages
+        // Listen for messages ... same code
         const q = query(
             collection(db, "conversations", id as string, "messages"),
             orderBy("createdAt", "asc")
@@ -153,7 +155,13 @@ export default function ChatPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-xl font-bold">{otherUserName}</h1>
+                    {otherUserId ? (
+                        <Link href={`/profile/${otherUserId}`} className="hover:underline hover:text-blue-300 transition-colors">
+                            <h1 className="text-xl font-bold">{otherUserName}</h1>
+                        </Link>
+                    ) : (
+                        <h1 className="text-xl font-bold">{otherUserName}</h1>
+                    )}
                     <p className="text-xs text-muted-foreground">Messaging</p>
                 </div>
                 <div className="ml-auto">

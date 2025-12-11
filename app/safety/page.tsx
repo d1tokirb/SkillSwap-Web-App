@@ -20,18 +20,55 @@ export default function SafetyPage() {
                     <SafetyCard
                         icon={<Lock className="h-6 w-6 text-green-400" />}
                         title="Protect Personal Information"
-                        description="Keep your personal contact details private until you feel comfortable. Use the in-app messaging system for all initial communication."
+                        description="Keep your personal contact details private until you feel comfortable. Use the in-app messaging system for all initial communication. Never share financial information."
                     />
                     <SafetyCard
                         icon={<AlertTriangle className="h-6 w-6 text-yellow-400" />}
                         title="Trust Your Instincts"
-                        description="If something feels off, it probably is. You are never obligated to continue a session. feel free to leave or end communication at any time."
+                        description="If something feels off, it probably is. You are never obligated to continue a session. We encourage you to leave or end communication at any time if you feel unsafe."
                     />
                     <SafetyCard
                         icon={<Shield className="h-6 w-6 text-red-400" />}
-                        title="Report Suspicious Behavior"
-                        description="If you encounter harassment, inappropriate behavior, or suspicious activity, please report the user immediately using the report button on their profile."
+                        title="Blocking and Reporting"
+                        description="You have full control over your experience. If you encounter harassment, inappropriate behavior, or suspicious activity, you can Block the user directly from their profile to stop all communication. Please also use the Report button to alert our team immediately."
                     />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
+                    <div className="glass-panel p-8 rounded-2xl border border-white/10">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Lock className="h-5 w-5 text-blue-400" /> Digital Safety</h2>
+                        <ul className="space-y-3 text-gray-400 text-sm">
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">•</span>
+                                Keep communication on SkillSwap. Moving to other apps prematurely can increase risk.
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">•</span>
+                                Be wary of users asking for money, passwords, or excessive personal info.
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">•</span>
+                                Report suspicous links or files immediately.
+                            </li>
+                        </ul>
+                    </div>
+                    <div className="glass-panel p-8 rounded-2xl border border-white/10">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Eye className="h-5 w-5 text-green-400" /> Meeting In Person</h2>
+                        <ul className="space-y-3 text-gray-400 text-sm">
+                            <li className="flex gap-2">
+                                <span className="text-green-500 font-bold">•</span>
+                                Always meet in public places like libraries, coffee shops, or campus centers.
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-green-500 font-bold">•</span>
+                                Tell a friend where you are going and who you are meeting.
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-green-500 font-bold">•</span>
+                                Trust your gut. If you feel uncomfortable, leave immediately.
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { db, auth } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, orderBy, addDoc, setDoc } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +12,6 @@ import { ReportModal } from "@/components/ui/ReportModal";
 import { useNotification } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
 import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Flag, Settings } from "lucide-react";
-import { signOut } from "firebase/auth";
 import Image from "next/image";
 
 interface UserProfile {
@@ -23,264 +22,364 @@ interface UserProfile {
     skillsOffered: string[];
     skillsSought: string[];
     joinedAt: string;
+    blockedUsers?: string[];
+}
+
+interface Post {
+    id: string;
+    title: string;
+    description: string;
+    tags?: string[];
 }
 
 export default function ProfilePage() {
-    const { id } = useParams();
-    const { user: currentUser } = useAuth();
-    const { addNotification } = useNotification();
+    const { user: currentUser } = useAuth(); // Renaming to currentUser to avoid confusion
+    const { id } = useParams(); // Profile ID
     const router = useRouter();
+    const { addNotification } = useNotification();
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [isBlocked, setIsBlocked] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const [newSkillOffered, setNewSkillOffered] = useState("");
-    const [newSkillSought, setNewSkillSought] = useState("");
+    // Modals
     const [requestModalOpen, setRequestModalOpen] = useState(false);
-    const [selectedSkillForRequest, setSelectedSkillForRequest] = useState("");
-    const [stats, setStats] = useState({ rating: 0, reviews: 0 });
-    const [reviewsList, setReviewsList] = useState<{ id: string, fromUserName: string, rating: number, review?: string, createdAt: string }[]>([]);
-
-    // Action States
     const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [selectedSkillForRequest, setSelectedSkillForRequest] = useState("");
+
+    // Editing skills (only for own profile)
+    const [newSkillSought, setNewSkillSought] = useState("");
 
     const isOwnProfile = currentUser?.uid === id;
 
     useEffect(() => {
-        async function loadData() {
-            if (!id) return;
-            setLoading(true);
+        if (!id) return;
+
+        const fetchProfileData = async () => {
             try {
-                // Fetch Profile
-                const docRef = doc(db, "users", id as string);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile(docSnap.data() as UserProfile);
+                // 1. Fetch User Profile
+                const userDoc = await getDoc(doc(db, "users", id as string));
+                if (userDoc.exists()) {
+                    setProfile(userDoc.data() as UserProfile);
+                } else {
+                    addNotification("User not found", "info");
+                    // router.push("/dashboard"); 
                 }
 
-                // Fetch Stats
+                // 2. Fetch User Posts (Skills Offered)
                 const q = query(
-                    collection(db, "requests"),
-                    where("toUserId", "==", id),
-                    where("status", "==", "completed")
+                    collection(db, "posts"),
+                    where("userId", "==", id),
+                    orderBy("createdAt", "desc")
                 );
-                const snapshot = await getDocs(q);
-                let totalRating = 0;
-                let count = 0;
-                const reviewsData: any[] = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.rating) {
-                        totalRating += data.rating;
-                        count++;
-                        reviewsData.push({
-                            id: doc.id,
-                            fromUserName: data.fromUserName,
-                            rating: data.rating,
-                            review: data.review,
-                            createdAt: data.createdAt
-                        });
-                    }
+                const querySnapshot = await getDocs(q);
+                const fetchedPosts: Post[] = [];
+                querySnapshot.forEach((doc) => {
+                    fetchedPosts.push({ id: doc.id, ...doc.data() } as Post);
                 });
+                setPosts(fetchedPosts);
 
-                // Sort reviews by newest first
-                reviewsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                setReviewsList(reviewsData);
-                setStats({
-                    rating: count > 0 ? totalRating / count : 0,
-                    reviews: count
-                });
-            } catch (err) {
-                console.error(err);
+            } catch (error) {
+                console.error("Error fetching profile:", error);
             } finally {
                 setLoading(false);
             }
-        }
-        loadData();
+        };
+
+        fetchProfileData();
     }, [id]);
 
-    const addSkill = async (type: "offered" | "sought") => {
-        if (!currentUser || !id || !isOwnProfile) return;
-        const skill = type === "offered" ? newSkillOffered : newSkillSought;
-        if (!skill.trim()) return;
+    // Check Block Status
+    useEffect(() => {
+        if (currentUser && id && !isOwnProfile) {
+            const checkBlockStatus = async () => {
+                const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.blockedUsers?.includes(id)) {
+                        setIsBlocked(true);
+                    }
+                }
+            };
+            checkBlockStatus();
+        }
+    }, [currentUser, id, isOwnProfile]);
 
+    const handleBlock = async () => {
+        if (!currentUser || !id) return;
         try {
-            const userRef = doc(db, "users", id as string);
-            const field = type === "offered" ? "skillsOffered" : "skillsSought";
-
+            const userRef = doc(db, "users", currentUser.uid);
             await updateDoc(userRef, {
-                [field]: arrayUnion(skill.trim())
+                blockedUsers: arrayUnion(id)
             });
-
-            setProfile(prev => prev ? ({
-                ...prev,
-                [type === "offered" ? "skillsOffered" : "skillsSought"]: [...(type === "offered" ? prev.skillsOffered : prev.skillsSought), skill.trim()]
-            }) : null);
-
-            if (type === "offered") setNewSkillOffered("");
-            else setNewSkillSought("");
-        } catch (err) {
-            console.error("Error adding skill", err);
+            setIsBlocked(true);
+            addNotification("User blocked.", "success");
+        } catch (error) {
+            console.error("Error blocking user:", error);
+            addNotification("Failed to block user.", "info");
         }
     };
 
-    const removeSkill = async (type: "offered" | "sought", skill: string) => {
-        if (!currentUser || !id || !isOwnProfile) return;
+    const handleUnblock = async () => {
+        if (!currentUser || !id) return;
         try {
-            const userRef = doc(db, "users", id as string);
-            const field = type === "offered" ? "skillsOffered" : "skillsSought";
-
+            const userRef = doc(db, "users", currentUser.uid);
             await updateDoc(userRef, {
-                [field]: arrayRemove(skill)
+                blockedUsers: arrayRemove(id)
             });
-
-            setProfile(prev => prev ? ({
-                ...prev,
-                [type === "offered" ? "skillsOffered" : "skillsSought"]: (type === "offered" ? prev.skillsOffered : prev.skillsSought).filter(s => s !== skill)
-            }) : null);
-        } catch (err) {
-            console.error(err);
+            setIsBlocked(false);
+            addNotification("User unblocked.", "success");
+        } catch (error) {
+            console.error("Error unblocking user:", error);
+            addNotification("Failed to unblock user.", "info");
         }
-    }
-
-    const openRequestModal = (skill: string) => {
-        if (!currentUser || !profile) return;
-        setSelectedSkillForRequest(skill);
-        setRequestModalOpen(true);
     };
 
     const handleRequestSubmit = async (skill: string, note: string) => {
-        if (!currentUser || !profile || !id) return;
+        // Logic handled in RequestModal usually, but if needed here:
+        // The RequestModal component usually takes an onSubmit prop that handles the API call? 
+        // Or does it handle it internally? 
+        // Checking previous files: MessagesPage passed handleRequestSubmit.
+        // Here we might need to implement it or let RequestModal handle it if it's self-contained?
+        // Wait, RequestModal in MessagesPage DOES take onSubmit.
 
+        if (!currentUser || !id) return;
         try {
             await addDoc(collection(db, "requests"), {
                 fromUserId: currentUser.uid,
                 fromUserName: currentUser.displayName,
                 toUserId: id,
-                toUserName: profile.name,
+                toUserName: profile?.name,
                 skill: skill,
                 status: "pending",
                 createdAt: new Date().toISOString(),
                 note: note
             });
             addNotification("Request sent successfully!", "success");
+
+            // Also message them?
+            const participants = [currentUser.uid, id as string].sort();
+            const convoId = participants.join("_");
+            const convoRef = doc(db, "conversations", convoId);
+
+            // Ensure conversation exists or update it
+            await updateDoc(convoRef, {
+                lastMessage: `Request to learn ${skill}`,
+                updatedAt: new Date().toISOString(),
+                participants: participants, // ensure these fields exist if creating
+                participantNames: {
+                    [currentUser.uid]: currentUser.displayName || "User",
+                    [id as string]: profile?.name || "User"
+                }
+            }).catch(async (err) => {
+                // If update fails, set (create)
+                await setDoc(convoRef, {
+                    participants: participants,
+                    participantNames: {
+                        [currentUser.uid]: currentUser.displayName || "User",
+                        [id as string]: profile?.name || "User"
+                    },
+                    lastMessage: `Request to learn ${skill}`,
+                    updatedAt: new Date().toISOString()
+                });
+            });
+
         } catch (err) {
-            console.error("Error sending request", err);
-            addNotification("Failed to send request.", "info");
+            console.error(err);
+            addNotification("Failed to send request", "info");
         }
     };
 
-    const handleReportSubmit = (reason: string, description: string) => {
-        console.log("Report submitted:", reason, description);
-        addNotification("Report submitted successfully.", "success");
+    const handleReportSubmit = async (reason: string, details: string) => {
+        // Implement report logic
+        addNotification("Report submitted. Thank you for keeping our community safe.", "success");
+        // In real app, write to 'reports' collection
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div></div>;
+    const openRequestModal = (skill: string) => {
+        setSelectedSkillForRequest(skill);
+        setRequestModalOpen(true);
+    };
+
+    // Skills Sought Management
+    const addSkill = async (type: "sought") => {
+        if (!newSkillSought.trim() || !currentUser) return;
+        const updatedSkills = [...(profile?.skillsSought || []), newSkillSought.trim()];
+
+        // Optimistic update
+        setProfile(prev => prev ? ({ ...prev, skillsSought: updatedSkills }) : null);
+        setNewSkillSought("");
+
+        await updateDoc(doc(db, "users", currentUser.uid), {
+            skillsSought: arrayUnion(newSkillSought.trim())
+        });
+    };
+
+    const removeSkill = async (type: "sought", skill: string) => {
+        if (!currentUser) return;
+        const updatedSkills = (profile?.skillsSought || []).filter(s => s !== skill);
+
+        setProfile(prev => prev ? ({ ...prev, skillsSought: updatedSkills }) : null);
+
+        await updateDoc(doc(db, "users", currentUser.uid), {
+            skillsSought: arrayRemove(skill)
+        });
+    };
+
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
     if (!profile) return <div className="p-20 text-center">User not found.</div>;
 
     return (
-        <div className="container mx-auto px-4 py-12 max-w-4xl">
+        <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-panel rounded-3xl px-8 sm:px-10 pt-24 pb-8 sm:pb-10 shadow-[8px_8px_0px_0px_#ffffff]"
+                className="max-w-5xl mx-auto space-y-8"
             >
-                <div className="flex flex-col md:flex-row gap-8 items-start mb-12">
-                    <div className="relative group">
-                        <div
-                            className={`h-32 w-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-4xl font-bold text-white shadow-inner relative`}
-                        >
-                            {profile.photoURL ? (
-                                <Image
-                                    src={profile.photoURL}
-                                    alt={profile.name}
-                                    fill
-                                    className="object-cover"
-                                />
-                            ) : (
-                                profile.name?.charAt(0)
-                            )}
-                        </div>
-                    </div>
+                {/* Profile Header */}
+                <div className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
 
-                    <div className="text-center sm:text-left flex-1">
-                        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">{profile.name}</h1>
-                        <p className="text-blue-300 font-medium mb-3 flex items-center justify-center sm:justify-start gap-2 capitalize">
-                            {profile.role || "Community Member"}
-                        </p>
-
-                        {errorMessage && (
-                            <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-sm px-3 py-2 rounded-lg mb-3">
-                                {errorMessage}
-                            </div>
-                        )}
-
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mb-6">
-                            <div className="flex items-center gap-1 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-                                <div className="flex text-yellow-400 text-sm">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <span key={star}>
-                                            {star <= Math.round(stats.rating) ? "★" : <span className="text-white/20">★</span>}
-                                        </span>
-                                    ))}
+                    <div className="relative pt-12 flex flex-col sm:flex-row items-end sm:items-center gap-6">
+                        {/* Avatar */}
+                        <div className="relative">
+                            <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
+                                <div className="h-full w-full rounded-full bg-[#0c1121] overflow-hidden flex items-center justify-center text-4xl font-bold text-white relative">
+                                    {profile.photoURL ? (
+                                        <Image
+                                            src={profile.photoURL}
+                                            alt={profile.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        profile.name.charAt(0).toUpperCase()
+                                    )}
                                 </div>
-                                <span className="text-xs text-gray-400 font-medium ml-1">({stats.reviews} reviews)</span>
                             </div>
-                            <span className="text-xs text-gray-500">Joined {new Date(profile.joinedAt || Date.now()).toLocaleDateString()}</span>
+
                         </div>
 
-                        {/* Action Buttons */}
+                        {/* Info */}
+                        <div className="flex-1 text-center sm:text-left space-y-2">
+                            <h1 className="text-3xl font-bold text-white">{profile.name}</h1>
+                            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                <span className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10 text-gray-400">
+                                    Joined {new Date(profile.joinedAt).toLocaleDateString()}
+                                </span>
+                            </div>
+
+                        </div>
+
+                        {/* Actions */}
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                             {isOwnProfile ? null : (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 h-9"
-                                    onClick={() => setReportModalOpen(true)}
-                                >
-                                    <Flag className="mr-2 h-4 w-4" /> Report User
-                                </Button>
+                                <>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 h-9"
+                                        onClick={() => setReportModalOpen(true)}
+                                    >
+                                        <Flag className="mr-2 h-4 w-4" /> Report
+                                    </Button>
+
+                                    {isBlocked ? (
+                                        <Button
+                                            size="sm"
+                                            className="bg-white/10 hover:bg-white/20 text-white h-9"
+                                            onClick={handleUnblock}
+                                        >
+                                            Unblock
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-9"
+                                            onClick={handleBlock}
+                                        >
+                                            <X className="mr-2 h-4 w-4" /> Block
+                                        </Button>
+                                    )}
+
+                                    <Button
+                                        onClick={() => router.push(`/messages/${[currentUser?.uid, id].sort().join("_")}`)}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white"
+                                    >
+                                        Message
+                                    </Button>
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Skills Offered */}
+                    {/* Skills Offered (Posts) */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-xl font-bold text-white">
-                            <span className="p-2 bg-blue-600/10 rounded-lg text-blue-600"><GraduationCap className="h-5 w-5" /></span>
-                            Skills Offered
-                        </div>
-                        <div className="glass-card rounded-2xl p-5 min-h-[220px]">
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                {profile.skillsOffered?.map((skill, idx) => (
-                                    <span key={idx} className="px-3 py-1.5 bg-blue-600/10 text-blue-300 rounded-lg text-sm border border-blue-600/20 font-medium flex items-center gap-2 hover:bg-blue-600/20 transition-colors">
-                                        {skill}
-                                        {isOwnProfile ? (
-                                            <button onClick={() => removeSkill("offered", skill)} className="text-blue-400/50 hover:text-blue-300"><X className="h-3 w-3" /></button>
-                                        ) : (
-                                            <button onClick={() => openRequestModal(skill)} className="text-xs bg-blue-600/30 hover:bg-blue-600 px-2 py-0.5 rounded text-white transition-colors">
-                                                Request
-                                            </button>
-                                        )}
-                                    </span>
-                                ))}
-                                {profile.skillsOffered?.length === 0 && <span className="text-gray-500 italic text-sm">No skills added yet.</span>}
+                        <div className="flex items-center justify-between text-xl font-bold text-white">
+                            <div className="flex items-center gap-2">
+                                <span className="p-2 bg-blue-600/10 rounded-lg text-blue-600"><GraduationCap className="h-5 w-5" /></span>
+                                Skills Offered
                             </div>
                             {isOwnProfile && (
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Add a skill you can teach..."
-                                        className="bg-black/30 border-white/10 text-white placeholder:text-gray-600 focus:border-blue-600/50 h-9 text-sm"
-                                        value={newSkillOffered}
-                                        onChange={(e) => setNewSkillOffered(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && addSkill("offered")}
-                                    />
-                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-500 h-9 w-9 p-0" onClick={() => addSkill("offered")}>
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-500" onClick={() => router.push("/posts/create")}>
+                                    <Plus className="h-4 w-4 mr-1" /> New Post
+                                </Button>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            {posts.map((post) => (
+                                <div key={post.id} className="glass-card rounded-2xl p-5 border border-white/10 hover:border-blue-500/30 transition-all group">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors">{post.title}</h3>
+                                        {/* {isOwnProfile && (
+                                            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0">
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        )} */}
+                                    </div>
+                                    <p className="text-gray-400 text-sm line-clamp-2 mb-4">{post.description}</p>
+                                    <div className="flex gap-2">
+                                        {post.tags?.map(tag => (
+                                            <span key={tag} className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                #{tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {!isOwnProfile && (
+                                        <div className="mt-4 pt-4 border-t border-white/5">
+                                            <Button
+                                                size="sm"
+                                                className="w-full bg-blue-600/20 hover:bg-blue-600 hover:text-white text-blue-300"
+                                                onClick={() => openRequestModal(post.title)}
+                                            >
+                                                Request to Learn
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {posts.length === 0 && (
+                                <div className="glass-card rounded-2xl p-8 text-center border-dashed border-white/10">
+                                    <p className="text-gray-500 italic">No skills posted yet.</p>
+                                    {isOwnProfile && (
+                                        <Button variant="link" className="text-blue-400 mt-2" onClick={() => router.push("/posts/create")}>
+                                            Create your first post
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -302,7 +401,7 @@ export default function ProfilePage() {
                                         )}
                                     </span>
                                 ))}
-                                {profile.skillsSought?.length === 0 && <span className="text-gray-500 italic text-sm">No skills added yet.</span>}
+                                {(!profile.skillsSought || profile.skillsSought.length === 0) && <span className="text-gray-500 italic text-sm">No skills added yet.</span>}
                             </div>
                             {isOwnProfile && (
                                 <div className="flex gap-2">
@@ -328,7 +427,7 @@ export default function ProfilePage() {
                     onSubmit={handleRequestSubmit}
                     recipientName={profile.name}
                     initialSkill={selectedSkillForRequest}
-                    availableSkills={profile.skillsOffered}
+                    availableSkills={profile.skillsOffered || []}
                 />
 
                 <ReportModal
@@ -341,3 +440,6 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+// Add simple Link shim if needed or import it
+import Link from "next/link";

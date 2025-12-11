@@ -11,7 +11,7 @@ function cn(...inputs: ClassValue[]) {
 
 interface ButtonProps extends HTMLMotionProps<"button"> {
     children: ReactNode;
-    variant?: "primary" | "secondary" | "outline" | "ghost";
+    variant?: "primary" | "secondary" | "outline" | "ghost" | "link";
     size?: "sm" | "md" | "lg";
     className?: string;
 }
@@ -30,6 +30,7 @@ export function Button({
         secondary: "bg-slate-800 text-white hover:bg-slate-700 shadow-sm active:scale-[0.98] transition-all duration-200 border border-white/10",
         outline: "bg-transparent text-white border border-white/20 hover:bg-white/5 active:scale-[0.98] transition-all duration-200",
         ghost: "bg-transparent text-gray-300 hover:text-white hover:bg-white/5 active:scale-[0.98] transition-all duration-200",
+        link: "bg-transparent text-blue-400 hover:text-blue-300 underline-offset-4 hover:underline shadow-none border-0 p-0 h-auto",
     };
 
     const sizes = {

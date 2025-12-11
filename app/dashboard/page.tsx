@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, query, orderBy } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -14,9 +14,21 @@ export default function Dashboard() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    const [skillAds, setSkillAds] = useState<{ userId: string, userName: string, skill: string }[]>([]);
-    const [mySkillsSought, setMySkillsSought] = useState<string[]>([]);
+    interface Post {
+        id: string;
+        title: string;
+        description: string;
+        userId: string;
+        authorName: string;
+        authorPhoto: string;
+        tags?: string[];
+        category?: string;
+    }
+
+    const [posts, setPosts] = useState<Post[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
     const [fetching, setFetching] = useState(true);
     const [startingChat, setStartingChat] = useState("");
 
@@ -24,31 +36,27 @@ export default function Dashboard() {
         if (!loading && !user) {
             router.push("/login");
         } else if (user) {
-            fetchSkills();
+            // Fetch Blocked Users
+            const fetchBlocked = async () => {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setBlockedUsers(userDoc.data().blockedUsers || []);
+                }
+            };
+            fetchBlocked();
+            fetchPosts();
         }
     }, [user, loading, router]);
 
-    const fetchSkills = async () => {
+    const fetchPosts = async () => {
         try {
-            if (user) {
-                const myProfileSnap = await getDoc(doc(db, "users", user.uid));
-                if (myProfileSnap.exists()) {
-                    const data = myProfileSnap.data();
-                    setMySkillsSought(Array.isArray(data.skillsSought) ? data.skillsSought : []);
-                }
-            }
-
-            const querySnapshot = await getDocs(collection(db, "users"));
-            const ads: { userId: string, userName: string, skill: string }[] = [];
+            const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            const fetchedPosts: Post[] = [];
             querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                if (data.skillsOffered && Array.isArray(data.skillsOffered)) {
-                    data.skillsOffered.forEach((s: string) => {
-                        ads.push({ userId: doc.id, userName: data.name, skill: s });
-                    });
-                }
+                fetchedPosts.push({ id: doc.id, ...doc.data() } as Post);
             });
-            setSkillAds(ads);
+            setPosts(fetchedPosts);
         } catch (e) {
             console.error(e);
         } finally {
@@ -87,14 +95,20 @@ export default function Dashboard() {
         }
     };
 
-    const filteredSkills = skillAds.filter((ad) =>
-        ad.skill.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
-    const recommendedSkills = skillAds.filter(ad =>
-        ad.userId !== user?.uid &&
-        mySkillsSought.some(sought => ad.skill.toLowerCase().includes(sought.toLowerCase()))
-    );
+
+
+    const filteredPosts = posts.filter((post) => {
+        if (blockedUsers.includes(post.userId)) return false;
+
+        const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (post.tags && post.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())));
+
+        const matchesCategory = selectedCategory === "All" || post.category === selectedCategory || (selectedCategory === "Other" && !["Tech", "Art", "Music", "Language", "Lifestyle"].includes(post.category || ""));
+
+        return matchesSearch && matchesCategory;
+    });
 
     if (loading || !user || fetching) {
         return (
@@ -105,129 +119,129 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 max-w-7xl">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Community Feed</h1>
-                    <p className="text-gray-400">Find skills to teach or learn.</p>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 max-w-7xl">
+            {/* Hero & Search */}
+            <div className="glass-panel p-8 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
+                <div className="z-10">
+                    <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
+                        What do you want to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">learn</span> today?
+                    </h1>
+                    <p className="text-gray-400 text-lg">Discover skills, find teachers, and swap knowledge.</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:w-auto">
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto z-10">
+                    <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input
                             type="text"
                             placeholder="Search skills..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full h-10 rounded-lg pl-9 bg-[#151a2d] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                            className="w-full h-10 rounded-lg pl-9 bg-[#0c1121]/50 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
                         />
                     </div>
-                    <Link href={`/profile/${user.uid}`}>
-                        <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0">
-                            <Plus className="mr-2 h-4 w-4" /> Post
+                    <Link href="/posts/create">
+                        <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 w-full sm:w-auto">
+                            <Plus className="mr-2 h-4 w-4" /> Offer Skill
                         </Button>
                     </Link>
                 </div>
             </div>
 
-            {recommendedSkills.length > 0 && (
-                <div className="space-y-6">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="text-yellow-400 h-5 w-5" />
-                        <h2 className="text-2xl font-bold text-white">Recommended for You</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {recommendedSkills.map((ad, idx) => (
-                            <motion.div
-                                key={`rec-${ad.userId}-${ad.skill}-${idx}`}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="glass-card p-6 rounded-2xl flex flex-col justify-between group border-yellow-500/20 shadow-[0_0_15px_-3px_rgba(234,179,8,0.1)]"
-                            >
-                                <div>
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className="px-3 py-1 bg-yellow-500/10 text-yellow-300 rounded-full text-sm font-medium border border-yellow-500/20 flex items-center gap-1">
-                                            <Sparkles className="h-3 w-3" /> {ad.skill}
-                                        </span>
-                                    </div>
-                                    <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
-                                    <p className="text-gray-400 text-sm mb-6">
-                                        Matches your interest in <span className="text-yellow-300">{ad.skill}</span>.
-                                    </p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <Link href={`/profile/${ad.userId}`} className="flex-1">
-                                        <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
-                                            Profile
-                                        </Button>
-                                    </Link>
-                                    <Button
-                                        className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white shadow-md active:scale-95 transition-all border-0"
-                                        onClick={() => handleMessage(ad.userId, ad.userName)}
-                                        disabled={startingChat === ad.userId}
-                                    >
-                                        {startingChat === ad.userId ? "..." : "Message"}
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                    <div className="h-px bg-white/10 w-full my-8"></div>
-                </div>
-            )}
+            {/* Filter Chips */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {["All", "Tech", "Art", "Music", "Language", "Lifestyle", "Other"].map(cat => (
+                    <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border ${selectedCategory === cat
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                            }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </div>
 
-            <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-white">All Skills</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredSkills.map((ad, idx) => (
-                        <motion.div
-                            key={`${ad.userId}-${ad.skill}-${idx}`}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: idx * 0.05, duration: 0.3 }}
-                            className="glass-card p-6 rounded-2xl flex flex-col justify-between group"
-                        >
-                            <div>
-                                <div className="flex justify-between items-start mb-4">
-                                    <span className="px-3 py-1 bg-blue-500/10 text-blue-300 rounded-full text-sm font-medium border border-blue-500/20">
-                                        {ad.skill}
-                                    </span>
+            {/* Masonry Feed */}
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+                {filteredPosts.map((post, idx) => (
+                    <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="break-inside-avoid mb-6"
+                    >
+                        <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 group hover:border-white/20 transition-all duration-300 hover:shadow-[0_0_20px_-5px_rgba(37,99,235,0.15)] hover:-translate-y-1">
+                            {/* Author Header */}
+                            <div className="flex items-center gap-3">
+                                <Link href={`/profile/${post.userId}`} className="block relative group/avatar cursor-pointer">
+                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden ring-2 ring-transparent group-hover/avatar:ring-blue-400 transition-all">
+                                        {post.authorPhoto ? (
+                                            <img src={post.authorPhoto} alt={post.authorName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            post.authorName.charAt(0).toUpperCase()
+                                        )}
+                                    </div>
+                                </Link>
+                                <div className="flex-1 min-w-0">
+                                    <Link href={`/profile/${post.userId}`} className="hover:underline hover:text-blue-300 transition-colors">
+                                        <p className="text-sm font-medium text-white truncate">{post.authorName}</p>
+                                    </Link>
+                                    <p className="text-xs text-gray-500">Teacher</p>
                                 </div>
-                                <h3 className="text-xl font-bold mb-1 text-white">{ad.userName}</h3>
-                                <p className="text-gray-400 text-sm mb-6">
-                                    Is offering to teach <span className="text-blue-300">{ad.skill}</span>.
+                            </div>
+
+                            {/* Content */}
+                            <div>
+                                <h3 className="text-xl font-bold text-white mb-2 leading-tight">{post.title}</h3>
+                                <p className="text-gray-400 text-sm leading-relaxed line-clamp-4">
+                                    {post.description}
                                 </p>
                             </div>
-                            <div className="flex gap-3">
-                                <Link href={`/profile/${ad.userId}`} className="flex-1">
-                                    <Button variant="outline" className="w-full hover:bg-white/5 hover:text-white text-gray-300 border-white/10">
-                                        Profile
-                                    </Button>
-                                </Link>
-                                {ad.userId !== user.uid && (
+
+                            {/* Tags */}
+                            <div className="flex flex-wrap gap-2">
+                                {post.tags?.map(tag => (
+                                    <span key={tag} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                        #{tag}
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Action */}
+                            <div className="pt-2">
+                                {post.userId !== user.uid ? (
                                     <Button
-                                        className="flex-1 bg-blue-600 hover:bg-blue-500 text-white shadow-md active:scale-95 transition-all"
-                                        onClick={() => handleMessage(ad.userId, ad.userName)}
-                                        disabled={startingChat === ad.userId}
+                                        className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 group-hover:border-blue-500/30 group-hover:text-blue-200 transition-colors"
+                                        onClick={() => handleMessage(post.userId, post.authorName)}
+                                        disabled={startingChat === post.userId}
                                     >
-                                        {startingChat === ad.userId ? "..." : "Message"}
+                                        {startingChat === post.userId ? "Starting Chat..." : "Message"}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-white/10 text-gray-400 cursor-default hover:bg-transparent"
+                                    >
+                                        Your Post
                                     </Button>
                                 )}
                             </div>
-                        </motion.div>
-                    ))}
-
-                    {filteredSkills.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 glass-panel rounded-2xl border-dashed border-white/20">
-                            <p className="text-gray-400 text-lg mb-4">No matching skills found.</p>
-                            <Link href={`/profile/${user.uid}`}>
-                                <Button className="bg-blue-600 hover:bg-blue-500">Offer a Skill</Button>
-                            </Link>
                         </div>
-                    )}
-                </div>
+                    </motion.div>
+                ))}
             </div>
+
+            {filteredPosts.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <p className="text-gray-500 text-lg mb-4">No skills found yet.</p>
+
+                </div>
+            )}
         </div>
     );
 }
