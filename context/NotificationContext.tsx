@@ -8,7 +8,7 @@ import { useAuth } from "./AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 
-type NotificationType = "info" | "success" | "message";
+type NotificationType = "info" | "success" | "message" | "error";
 
 interface Notification {
     id: string;

@@ -14,24 +14,32 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const [reduceMotion, setReduceMotion] = useState(false);
-    const [pushNotifications, setPushNotifications] = useState(true);
-    const [privacyMode, setPrivacyMode] = useState(false);
+    const [reduceMotion, setReduceMotion] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem("reduceMotion");
+            return saved ? JSON.parse(saved) : false;
+        }
+        return false;
+    });
 
-    useEffect(() => {
-        // Check for saved preferences
-        const savedMotion = localStorage.getItem("reduceMotion");
-        if (savedMotion) setReduceMotion(JSON.parse(savedMotion));
+    const [pushNotifications, setPushNotifications] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem("pushNotifications");
+            return saved ? JSON.parse(saved) : true;
+        }
+        return true;
+    });
 
-        const savedPush = localStorage.getItem("pushNotifications");
-        if (savedPush) setPushNotifications(JSON.parse(savedPush));
-
-        const savedPrivacy = localStorage.getItem("privacyMode");
-        if (savedPrivacy) setPrivacyMode(JSON.parse(savedPrivacy));
-    }, []);
+    const [privacyMode, setPrivacyMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem("privacyMode");
+            return saved ? JSON.parse(saved) : false;
+        }
+        return false;
+    });
 
     const toggleReduceMotion = () => {
-        setReduceMotion(prev => {
+        setReduceMotion((prev: boolean) => {
             const newValue = !prev;
             localStorage.setItem("reduceMotion", JSON.stringify(newValue));
             return newValue;
@@ -39,7 +47,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
 
     const togglePushNotifications = () => {
-        setPushNotifications(prev => {
+        setPushNotifications((prev: boolean) => {
             const newValue = !prev;
             localStorage.setItem("pushNotifications", JSON.stringify(newValue));
             return newValue;
@@ -47,7 +55,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
 
     const togglePrivacyMode = () => {
-        setPrivacyMode(prev => {
+        setPrivacyMode((prev: boolean) => {
             const newValue = !prev;
             localStorage.setItem("privacyMode", JSON.stringify(newValue));
             return newValue;
