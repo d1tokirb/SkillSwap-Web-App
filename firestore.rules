@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is admin
+    // Note: This relies on a custom claim OR looking up the user doc.
+    // Looking up the user doc costs a read, so custom claims are better for production.
+    // For this app, we will assume we check the user document or rely on trusted clients (which is weak)
+    // BUT strictly, we should fetch the user role.
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      // Users can only edit their own profile, Admins can edit anyone
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Only Admins can delete users
+      allow delete: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      match /notifications/{notificationId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        // Allow anyone signed in to create a notification for this user (e.g. requests)
+        allow create: if isSignedIn(); 
+        // Allow user to delete (dismiss) their own notifications
+        allow update, delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      // Users can edit/delete their own posts, Admins can delete any
+      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // Conversations
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn();
+      // Updates (new messages usually trigger this) allowed for participants
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      // Only Admins can nuke conversations ideally, or participants can "hide" them (update)
+      allow delete: if isAdmin();
+      
+      // Messages Subcollection
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants);
+        allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants);
+      }
+    }
+
+    // Requests
+    match /requests/{requestId} {
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.toUserId || request.auth.uid == resource.data.fromUserId || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}

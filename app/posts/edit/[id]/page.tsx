@@ -1,34 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { addXp, XP_REWARDS } from "@/lib/gamification";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 
-export default function CreatePostPage() {
-    const { user } = useAuth();
+export default function EditPostPage() {
+    const { user, role } = useAuth();
+    const { id } = useParams();
     const router = useRouter();
     const { addNotification } = useNotification();
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isEnhancing, setIsEnhancing] = useState(false);
+    const [originalAuthorId, setOriginalAuthorId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!id) return;
+        const fetchPost = async () => {
+            try {
+                const docSnap = await getDoc(doc(db, "posts", id as string));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setTitle(data.title);
+                    setDescription(data.description);
+                    setOriginalAuthorId(data.userId);
+                } else {
+                    addNotification("Post not found", "error");
+                    router.push("/dashboard");
+                }
+            } catch (err) {
+                console.error(err);
+                addNotification("Error loading post", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPost();
+    }, [id]);
+
+    useEffect(() => {
+        if (!loading && user && originalAuthorId) {
+            // Check permissions: Owner or Admin
+            if (user.uid !== originalAuthorId && role !== 'admin') {
+                addNotification("You do not have permission to edit this post", "error");
+                router.push("/dashboard");
+            }
+        }
+    }, [loading, user, originalAuthorId, role]);
 
     const handleEnhance = async () => {
-        if (!description.trim()) {
-            addNotification("Please enter text and try again", "info");
-            return;
-        }
-
+        if (!description.trim()) return;
         setIsEnhancing(true);
         try {
             const res = await fetch("/api/ai", {
@@ -40,11 +72,8 @@ export default function CreatePostPage() {
             if (data.enhancedText) {
                 setDescription(data.enhancedText);
                 addNotification("Description enhanced!", "success");
-            } else {
-                addNotification("Could not enhance text.", "info");
             }
         } catch (error) {
-            console.error("Enhance error:", error);
             addNotification("Failed to enhance text.", "info");
         } finally {
             setIsEnhancing(false);
@@ -57,44 +86,25 @@ export default function CreatePostPage() {
 
         setIsSubmitting(true);
         try {
-            // Auto-Tagging
-            let category = "Other";
-            try {
-                const res = await fetch("/api/ai", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ type: "tag", content: `${title} - ${description}` })
-                });
-                const data = await res.json();
-                if (data.category) category = data.category;
-            } catch (ignore) {
-                console.warn("Auto-tagging failed, defaulting to Other");
-            }
-
-            await addDoc(collection(db, "posts"), {
+            // Update Post
+            await updateDoc(doc(db, "posts", id as string), {
                 title: title.trim(),
                 description: description.trim(),
-                userId: user.uid,
-                authorName: user.displayName || "Anonymous",
-                authorPhoto: user.photoURL || "",
-                createdAt: serverTimestamp(),
-                tags: title.toLowerCase().split(" ").filter(t => t.length > 2),
-                category: category
+                tags: title.toLowerCase().split(" ").filter(t => t.length > 2)
+                // Logic to re-categorize could be added here if needed, but skipping for simplicity
             });
 
-            addNotification("Skill posted successfully!", "success");
-
-            // Award XP
-            await addXp(user.uid, XP_REWARDS.CREATE_POST);
-
+            addNotification("Post updated successfully!", "success");
             router.push("/dashboard");
         } catch (error) {
-            console.error("Error creating post:", error);
-            addNotification("Failed to create post.", "info");
+            console.error("Error updating post:", error);
+            addNotification("Failed to update post.", "error");
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-2 border-blue-500 rounded-full border-t-transparent" /></div>;
 
     return (
         <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
@@ -104,12 +114,10 @@ export default function CreatePostPage() {
                 className="max-w-2xl w-full space-y-8 glass-panel p-8 rounded-2xl border border-white/10"
             >
                 <div className="flex items-center gap-4 mb-6">
-                    <Link href="/dashboard">
-                        <Button variant="ghost" size="sm" className="hover:bg-white/5 text-gray-400 p-2">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                    <h1 className="text-2xl font-bold text-white">Offer a Skill</h1>
+                    <Button variant="ghost" size="sm" onClick={() => router.back()} className="hover:bg-white/5 text-gray-400 p-2">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <h1 className="text-2xl font-bold text-white">Edit Skill</h1>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -119,10 +127,9 @@ export default function CreatePostPage() {
                         </label>
                         <Input
                             id="title"
-                            placeholder="e.g. Advanced Jazz Guitar or React JS Basics"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:ring-blue-500"
+                            className="bg-white/5 border-white/10 text-white"
                             required
                         />
                     </div>
@@ -138,7 +145,7 @@ export default function CreatePostPage() {
                                 size="sm"
                                 onClick={handleEnhance}
                                 disabled={isEnhancing}
-                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 text-xs h-7"
+                                className="text-purple-400 hover:text-purple-300 text-xs h-7"
                             >
                                 <Sparkles className={`mr-1.5 h-3 w-3 ${isEnhancing ? "animate-spin" : ""}`} />
                                 {isEnhancing ? "Enhancing..." : "AI Enhance"}
@@ -147,23 +154,29 @@ export default function CreatePostPage() {
                         <textarea
                             id="description"
                             rows={6}
-                            placeholder="Describe what you know, your teaching style, or what students will learn..."
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="w-full rounded-md bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 p-3"
+                            className="w-full rounded-md bg-white/5 border border-white/10 text-white p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
 
-                    <div className="pt-4 flex justify-end">
+                    <div className="pt-4 flex justify-end gap-3">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => router.back()}
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             type="submit"
-                            className="bg-blue-600 hover:bg-blue-500 text-white w-full sm:w-auto"
+                            className="bg-blue-600 hover:bg-blue-500 text-white"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Posting..." : (
+                            {isSubmitting ? "Saving..." : (
                                 <>
-                                    <Send className="mr-2 h-4 w-4" /> Post Skill
+                                    <Save className="mr-2 h-4 w-4" /> Save Changes
                                 </>
                             )}
                         </Button>

@@ -65,6 +65,45 @@ export default function AboutPage() {
                         </div>
                     </div>
                 </div>
+                {/* BPA Chapter Information */}
+                <div className="border-t border-white/10 pt-10 text-center">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-blue-500 mb-6">BPA Chapter Information</h2>
+                    <div className="bg-[#0c1121] rounded-2xl p-8 border border-white/10 max-w-2xl mx-auto space-y-4">
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Chapter Name</p>
+                            <p className="text-white font-medium text-lg">[Insert Chapter Name]</p>
+                        </div>
+
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Theme</p>
+                            <p className="text-white font-medium">SkillSwap: Student Talent Exchange Platform</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+                            <div>
+                                <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">School</p>
+                                <p className="text-gray-300">Mahoning County Career and Technical Center</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Location</p>
+                                <p className="text-gray-300">Canfield, OH</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Year</p>
+                            <p className="text-gray-300">2026</p>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5 mt-4">
+                            <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Team Members</p>
+                            <ul className="text-blue-300 font-medium space-y-1">
+                                <li>[Member Name 1]</li>
+                                <li>[Member Name 2]</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

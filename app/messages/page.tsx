@@ -5,8 +5,9 @@ import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { User, MessageSquare, Trash2 } from "lucide-react";
+import { User, MessageSquare, Trash2, Inbox } from "lucide-react";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface Conversation {
     id: string;
@@ -18,6 +19,8 @@ interface Conversation {
 }
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { motion } from "framer-motion";
 
 export default function MessagesPage() {
     const { user, loading } = useAuth();
@@ -71,21 +74,37 @@ export default function MessagesPage() {
 
             <div className="glass-card border border-white/10 rounded-xl overflow-hidden min-h-[400px]">
                 {conversations.length === 0 ? (
-                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
-                        <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
-                        <p>No messages yet.</p>
-                        <p className="text-sm">Visit the Dashboard to start a conversation!</p>
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
+                        <div className="bg-white/5 p-4 rounded-full mb-4">
+                            <MessageSquare className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">No messages yet</h3>
+                        <p className="text-gray-400 text-sm max-w-xs mx-auto mb-6">
+                            Connect with others by starting a conversation from the Dashboard or a Profile.
+                        </p>
+                        <Link href="/dashboard">
+                            <Button className="bg-blue-600 hover:bg-blue-500 text-white">
+                                Find People
+                            </Button>
+                        </Link>
                     </div>
                 ) : (
-                    <div className="divide-y divide-white/10">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ staggerChildren: 0.05 }}
+                        className="divide-y divide-white/10"
+                    >
                         {conversations.map((convo) => {
                             // Find the other user's name
                             const otherUserId = convo.participants.find(uid => uid !== user?.uid) || "";
                             const otherUserName = convo.participantNames?.[otherUserId] || "User";
 
                             return (
-                                <div
+                                <motion.div
                                     key={convo.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
                                     onClick={() => router.push(`/messages/${convo.id}`)}
                                     className="block p-4 hover:bg-[#1a1f33] transition-colors group relative cursor-pointer"
                                 >
@@ -97,9 +116,11 @@ export default function MessagesPage() {
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="relative z-20 hover:scale-105 transition-transform"
                                             >
-                                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center font-bold text-white shadow-inner border border-white/10 ring-2 ring-transparent hover:ring-blue-400 transition-all">
-                                                    <span>{otherUserName.charAt(0)}</span>
-                                                </div>
+                                                <Avatar
+                                                    alt={otherUserName}
+                                                    size="md"
+                                                    className="ring-2 ring-transparent hover:ring-blue-400 transition-all"
+                                                />
                                             </Link>
                                             <div>
                                                 <h3 className="font-medium hover:text-blue-300 transition-colors">{otherUserName}</h3>
@@ -121,10 +142,10 @@ export default function MessagesPage() {
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
-                                </div>
+                                </motion.div>
                             );
                         })}
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div >

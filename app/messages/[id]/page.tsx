@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
+import { addXp, XP_REWARDS } from "@/lib/gamification";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Send, ArrowLeft, Calendar } from "lucide-react";
@@ -87,11 +88,15 @@ export default function ChatPage() {
                 createdAt: serverTimestamp()
             });
 
-            // Update conversation last message
+            // Update conversation last message AND senderId (Fixes notification bug)
             await setDoc(doc(db, "conversations", id as string), {
                 lastMessage: text,
+                lastMessageSenderId: user.uid,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
+
+            // Award XP
+            await addXp(user.uid, XP_REWARDS.SEND_MESSAGE);
 
         } catch (error) {
             console.error("Error sending message:", error);
@@ -137,8 +142,12 @@ export default function ChatPage() {
             });
             await setDoc(doc(db, "conversations", id as string), {
                 lastMessage: autoMsg,
+                lastMessageSenderId: user.uid,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
+
+            // Award XP
+            await addXp(user.uid, XP_REWARDS.SEND_REQUEST);
 
         } catch (err) {
             console.error("Error sending request", err);

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, orderBy, addDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, orderBy, addDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -11,19 +11,17 @@ import { RequestModal } from "@/components/ui/RequestModal";
 import { ReportModal } from "@/components/ui/ReportModal";
 import { useNotification } from "@/context/NotificationContext";
 import { motion } from "framer-motion";
-import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Flag, Settings } from "lucide-react";
+import { User as UserIcon, BookOpen, GraduationCap, X, Plus, Flag, Settings, Zap, ThumbsUp, Award, MessageSquare, Shield, ShieldOff } from "lucide-react";
+import { calculateLevel, getXpProgress, XP_PER_LEVEL } from "@/lib/gamification";
 import Image from "next/image";
+import { EndorsementModal } from "@/components/EndorsementModal";
+import { Avatar } from "@/components/ui/Avatar";
+import { EditProfileModal } from "@/components/EditProfileModal";
+import { BADGES } from "@/lib/badges";
 
-interface UserProfile {
-    name: string;
-    email: string;
-    role: string;
-    photoURL?: string;
-    skillsOffered: string[];
-    skillsSought: string[];
-    joinedAt: string;
-    blockedUsers?: string[];
-}
+
+import { UserProfile } from "@/types";
+
 
 interface Post {
     id: string;
@@ -33,25 +31,47 @@ interface Post {
 }
 
 export default function ProfilePage() {
-    const { user: currentUser } = useAuth(); // Renaming to currentUser to avoid confusion
+    const { user: currentUser, userData: currentUserProfile, role: userRole } = useAuth(); // Renaming to currentUser to avoid confusion
     const { id } = useParams(); // Profile ID
     const router = useRouter();
     const { addNotification } = useNotification();
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [posts, setPosts] = useState<Post[]>([]);
+    const [currentUserPosts, setCurrentUserPosts] = useState<Post[]>([]); // Posts for the logged-in user
     const [isBlocked, setIsBlocked] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Modals
+    const [editModalOpen, setEditModalOpen] = useState(false);
     const [requestModalOpen, setRequestModalOpen] = useState(false);
     const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [endorseModalOpen, setEndorseModalOpen] = useState(false);
     const [selectedSkillForRequest, setSelectedSkillForRequest] = useState("");
 
     // Editing skills (only for own profile)
     const [newSkillSought, setNewSkillSought] = useState("");
 
     const isOwnProfile = currentUser?.uid === id;
+    const canEdit = isOwnProfile || userRole === 'admin';
+
+    // Fetch Current User's Skills (for Swap)
+    useEffect(() => {
+        if (!currentUser) return;
+        const fetchMyPosts = async () => {
+            const q = query(
+                collection(db, "posts"),
+                where("userId", "==", currentUser.uid),
+            );
+            const querySnapshot = await getDocs(q);
+            const myPosts: Post[] = [];
+            querySnapshot.forEach((doc) => {
+                myPosts.push({ id: doc.id, ...doc.data() } as Post);
+            });
+            setCurrentUserPosts(myPosts);
+        }
+        fetchMyPosts();
+    }, [currentUser]);
 
     useEffect(() => {
         if (!id) return;
@@ -61,7 +81,7 @@ export default function ProfilePage() {
                 // 1. Fetch User Profile
                 const userDoc = await getDoc(doc(db, "users", id as string));
                 if (userDoc.exists()) {
-                    setProfile(userDoc.data() as UserProfile);
+                    setProfile({ id: userDoc.id, ...userDoc.data() } as UserProfile);
                 } else {
                     addNotification("User not found", "info");
                     // router.push("/dashboard"); 
@@ -136,16 +156,10 @@ export default function ProfilePage() {
         }
     };
 
-    const handleRequestSubmit = async (skill: string, note: string) => {
-        // Logic handled in RequestModal usually, but if needed here:
-        // The RequestModal component usually takes an onSubmit prop that handles the API call? 
-        // Or does it handle it internally? 
-        // Checking previous files: MessagesPage passed handleRequestSubmit.
-        // Here we might need to implement it or let RequestModal handle it if it's self-contained?
-        // Wait, RequestModal in MessagesPage DOES take onSubmit.
-
+    const handleRequestSubmit = async (skill: string, note: string, swapSkill?: string) => {
         if (!currentUser || !id) return;
         try {
+
             await addDoc(collection(db, "requests"), {
                 fromUserId: currentUser.uid,
                 fromUserName: currentUser.displayName,
@@ -154,33 +168,57 @@ export default function ProfilePage() {
                 skill: skill,
                 status: "pending",
                 createdAt: new Date().toISOString(),
-                note: note
+                note: note,
+                swapSkill: swapSkill // Save the offered skill
             });
-            addNotification("Request sent successfully!", "success");
+
+            addNotification(swapSkill ? "Swap proposal sent!" : "Request sent!", "success");
+
+            // Persistent Notification to Recipient
+            try {
+                // Construct message
+                const notifMessage = swapSkill
+                    ? `${currentUser.displayName || "User"} wants to swap: teaches you ${swapSkill} for ${skill}`
+                    : `${currentUser.displayName || "User"} requested to learn ${skill}`;
+
+                await addDoc(collection(db, "users", id as string, "notifications"), {
+                    type: "request",
+                    message: notifMessage,
+                    read: false,
+                    createdAt: serverTimestamp(),
+                    data: { fromUserId: currentUser.uid }
+                });
+            } catch (notifyError) {
+                console.error("Failed to create notification:", notifyError);
+            }
 
             // Also message them?
             const participants = [currentUser.uid, id as string].sort();
             const convoId = participants.join("_");
             const convoRef = doc(db, "conversations", convoId);
 
+            // Construct chat message
+            const chatMessage = swapSkill
+                ? `Proposed a swap: I teach you ${swapSkill}, you teach me ${skill}.`
+                : `Request to learn ${skill}`;
+
             // Ensure conversation exists or update it
             await updateDoc(convoRef, {
-                lastMessage: `Request to learn ${skill}`,
+                lastMessage: chatMessage,
                 updatedAt: new Date().toISOString(),
-                participants: participants, // ensure these fields exist if creating
+                participants: participants,
                 participantNames: {
                     [currentUser.uid]: currentUser.displayName || "User",
                     [id as string]: profile?.name || "User"
                 }
             }).catch(async (err) => {
-                // If update fails, set (create)
                 await setDoc(convoRef, {
                     participants: participants,
                     participantNames: {
                         [currentUser.uid]: currentUser.displayName || "User",
                         [id as string]: profile?.name || "User"
                     },
-                    lastMessage: `Request to learn ${skill}`,
+                    lastMessage: chatMessage,
                     updatedAt: new Date().toISOString()
                 });
             });
@@ -249,24 +287,18 @@ export default function ProfilePage() {
                 <div className="glass-panel p-8 rounded-3xl border border-white/10 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20"></div>
 
-                    <div className="relative pt-12 flex flex-col sm:flex-row items-end sm:items-center gap-6">
+                    <div className="relative pt-12 flex flex-col sm:flex-row items-center sm:items-center gap-6">
                         {/* Avatar */}
-                        <div className="relative">
-                            <div className="h-32 w-32 rounded-full p-1 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
-                                <div className="h-full w-full rounded-full bg-[#0c1121] overflow-hidden flex items-center justify-center text-4xl font-bold text-white relative">
-                                    {profile.photoURL ? (
-                                        <Image
-                                            src={profile.photoURL}
-                                            alt={profile.name}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    ) : (
-                                        profile.name.charAt(0).toUpperCase()
-                                    )}
-                                </div>
+                        <div className="relative mx-auto sm:mx-0">
+                            <div className="h-32 w-32 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-[3px]">
+                                <Avatar
+                                    src={profile.photoURL}
+                                    alt={profile.name}
+                                    lastSeen={profile.lastSeen}
+                                    className="h-full w-full bg-[#0c1121]"
+                                    size="xl"
+                                />
                             </div>
-
                         </div>
 
                         {/* Info */}
@@ -274,20 +306,67 @@ export default function ProfilePage() {
                             <h1 className="text-3xl font-bold text-white">{profile.name}</h1>
                             <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 <span className="text-xs px-2 py-1 rounded bg-white/5 border border-white/10 text-gray-400">
-                                    Joined {new Date(profile.joinedAt).toLocaleDateString()}
+                                    {profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'User'}
                                 </span>
                             </div>
 
+                            {/* Gamification Stats */}
+                            <div className="flex flex-col gap-1 max-w-[200px] mx-auto sm:mx-0 mt-3">
+                                <div className="flex items-center justify-between text-xs font-medium text-blue-300">
+                                    <div className="flex items-center gap-1">
+                                        <Zap className="h-3 w-3 fill-blue-300" />
+                                        <span>Level {calculateLevel(profile.xp || 0)}</span>
+                                    </div>
+                                    <span className="text-blue-300/60">{getXpProgress(profile.xp || 0)} / {XP_PER_LEVEL} XP</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-blue-950 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                        style={{ width: `${(getXpProgress(profile.xp || 0) / XP_PER_LEVEL) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {canEdit && (
+                                <div className="mt-4 flex justify-center sm:justify-start w-full max-w-[200px] mx-auto sm:mx-0">
+                                    <Button
+                                        size="sm"
+                                        className="bg-white/10 hover:bg-white/20 text-white h-9 w-full"
+                                        onClick={() => setEditModalOpen(true)}
+                                    >
+                                        <Settings className="mr-2 h-4 w-4" /> Edit Profile
+                                    </Button>
+                                </div>
+                            )}
+
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center sm:justify-start gap-3 w-full sm:w-auto">
+
+
                             {isOwnProfile ? null : (
                                 <>
                                     <Button
                                         size="sm"
+                                        className="bg-blue-600 hover:bg-blue-500 text-white"
+                                        onClick={() => openRequestModal("")}
+                                    >
+                                        <Zap className="mr-2 h-4 w-4" /> Swap Skill
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
                                         variant="outline"
-                                        className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 h-9"
+                                        className="text-white border-white/20 hover:bg-white/10"
+                                        onClick={() => router.push('/messages')}
+                                    >
+                                        <MessageSquare className="mr-2 h-4 w-4" /> Message
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-orange-400 border-orange-400/20 hover:bg-orange-400/10"
                                         onClick={() => setReportModalOpen(true)}
                                     >
                                         <Flag className="mr-2 h-4 w-4" /> Report
@@ -296,33 +375,28 @@ export default function ProfilePage() {
                                     {isBlocked ? (
                                         <Button
                                             size="sm"
-                                            className="bg-white/10 hover:bg-white/20 text-white h-9"
+                                            variant="outline"
+                                            className="text-green-400 border-green-400/20 hover:bg-green-400/10"
                                             onClick={handleUnblock}
                                         >
-                                            Unblock
+                                            <Shield className="mr-2 h-4 w-4" /> Unblock
                                         </Button>
                                     ) : (
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-9"
+                                            className="text-red-400 border-red-400/20 hover:bg-red-400/10"
                                             onClick={handleBlock}
                                         >
-                                            <X className="mr-2 h-4 w-4" /> Block
+                                            <ShieldOff className="mr-2 h-4 w-4" /> Block
                                         </Button>
                                     )}
-
-                                    <Button
-                                        onClick={() => router.push(`/messages/${[currentUser?.uid, id].sort().join("_")}`)}
-                                        className="bg-blue-600 hover:bg-blue-500 text-white"
-                                    >
-                                        Message
-                                    </Button>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Skills Offered (Posts) */}
@@ -419,7 +493,48 @@ export default function ProfilePage() {
                             )}
                         </div>
                     </div>
+
+
+
+                    {/* Achievements Section */}
+                    <div className="md:col-span-2 space-y-4">
+                        <div className="flex items-center gap-2 text-xl font-bold text-white">
+                            <span className="p-2 bg-yellow-500/10 rounded-lg text-yellow-400"><Award className="h-5 w-5" /></span>
+                            Achievements
+                        </div>
+                        <div className="glass-card rounded-2xl p-6 border border-white/10">
+                            <div className="flex flex-wrap gap-4">
+                                {BADGES.map(badge => {
+                                    const isUnlocked = badge.condition(profile);
+                                    if (!isUnlocked) return null; // Or render grayed out
+                                    const Icon = badge.icon;
+                                    return (
+                                        <div key={badge.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${badge.color} hover:bg-opacity-20 transition-all cursor-help`} title={badge.description}>
+                                            <Icon className="h-5 w-5" />
+                                            <div>
+                                                <p className="font-bold text-sm">{badge.label}</p>
+                                                <p className="text-[10px] opacity-80 uppercase tracking-wider">Unlocked</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {!BADGES.some(b => b.condition(profile)) && (
+                                    <p className="text-gray-500 italic">No achievements yet. Keep swapping skills!</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
+
+                <EndorsementModal
+                    // ... rest of modals
+                    isOpen={endorseModalOpen}
+                    onClose={() => setEndorseModalOpen(false)}
+                    targetUserId={id as string}
+                    targetUserName={profile.name}
+                    skills={profile.skillsOffered || []}
+                />
 
                 <RequestModal
                     isOpen={requestModalOpen}
@@ -428,6 +543,8 @@ export default function ProfilePage() {
                     recipientName={profile.name}
                     initialSkill={selectedSkillForRequest}
                     availableSkills={profile.skillsOffered || []}
+                    myOfferedSkills={currentUserPosts.map(p => p.title)}
+                    recipientWantedSkills={profile.skillsSought || []}
                 />
 
                 <ReportModal
@@ -436,8 +553,19 @@ export default function ProfilePage() {
                     onSubmit={handleReportSubmit}
                     userName={profile.name}
                 />
-            </motion.div>
-        </div>
+
+                {
+                    profile && (
+                        <EditProfileModal
+                            isOpen={editModalOpen}
+                            onClose={() => setEditModalOpen(false)}
+                            user={profile}
+                            onUserUpdated={(updatedUser) => setProfile({ ...profile, ...updatedUser })}
+                        />
+                    )
+                }
+            </motion.div >
+        </div >
     );
 }
 

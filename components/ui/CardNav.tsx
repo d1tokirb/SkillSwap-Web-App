@@ -28,6 +28,7 @@ interface CardNavProps {
     ease?: string;
     baseColor?: string;
     menuColor?: string;
+    rightContent?: React.ReactNode;
     buttonBgColor?: string;
     buttonTextColor?: string;
     ctaLabel?: string;
@@ -46,13 +47,16 @@ const CardNav = ({
     buttonBgColor,
     buttonTextColor,
     ctaLabel,
-    onCtaClick
+    onCtaClick,
+    rightContent
 }: CardNavProps) => {
     const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const navRef = useRef<HTMLElement>(null);
     const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
     const tlRef = useRef<gsap.core.Timeline | null>(null);
+
+    // ... (rest of component logic unchanged until return) ...
 
     const calculateHeight = () => {
         const navEl = navRef.current;
@@ -171,6 +175,13 @@ const CardNav = ({
         <div className={`card-nav-container ${className}`}>
             <nav ref={navRef} className={`card-nav ${isExpanded ? 'open' : ''}`}>
                 <div className="card-nav-top">
+                    {/* Hamburger (Left on mobile, but code shows top bar is flex row) */}
+
+                    {/* Actually the structure is: Hamburger | Logo | Right Content needed? 
+                      The current struct: Hamburger (Abs? No flex items) | Logo | CTA
+                      Let's see the JSX below.
+                   */}
+
                     <div
                         className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''}`}
                         onClick={toggleMenu}
@@ -187,16 +198,23 @@ const CardNav = ({
                         {logo ? <img src={logo} alt={logoAlt || 'Logo'} className="logo" /> : <span>{logoText}</span>}
                     </div>
 
-                    {ctaLabel && (
-                        <button
-                            type="button"
-                            className="card-nav-cta-button"
-                            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
-                            onClick={onCtaClick}
-                        >
-                            {ctaLabel}
-                        </button>
-                    )}
+                    <div className="flex items-center gap-4 h-full">
+                        {rightContent && (
+                            <div className="flex items-center">
+                                {rightContent}
+                            </div>
+                        )}
+                        {ctaLabel && (
+                            <button
+                                type="button"
+                                className="card-nav-cta-button"
+                                style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
+                                onClick={onCtaClick}
+                            >
+                                {ctaLabel}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="card-nav-content" aria-hidden={!isExpanded}>

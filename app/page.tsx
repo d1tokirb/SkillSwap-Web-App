@@ -85,7 +85,7 @@ export default function Home() {
 
 
         {/* Feature Grid */}
-        <section className="py-24 bg-[#0c1121]">
+        <section id="features" className="py-24 bg-[#0c1121]">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold mb-4">Why Choose SkillSwap?</h2>
@@ -112,7 +112,7 @@ export default function Home() {
         </section>
 
         {/* How It Works Section */}
-        <section className="py-24 border-t border-white/5 relative overflow-hidden">
+        <section id="how-it-works" className="py-24 border-t border-white/5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-blue-900/5 -skew-y-3 transform origin-top-left scale-110 pointer-events-none" />
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
             <div className="text-center mb-16">
@@ -247,19 +247,32 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
 
 function StepItem({ step, title, desc }: { step: string, title: string, desc: string }) {
   return (
-    <div className="flex flex-col items-center text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: parseInt(step) * 0.1 }}
+      className="flex flex-col items-center text-center"
+    >
       <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-6 rotate-3 hover:rotate-6 transition-transform">
         {step}
       </div>
       <h3 className="text-xl font-bold mb-3">{title}</h3>
       <p className="text-gray-400 max-w-xs">{desc}</p>
-    </div>
+    </motion.div>
   )
 }
 
 function TestimonialCard({ name, role, quote }: { name: string, role: string, quote: string }) {
   return (
-    <div className="p-6 rounded-2xl bg-[#13192b] border border-white/5">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4 }}
+      whileHover={{ y: -5 }}
+      className="p-6 rounded-2xl bg-[#13192b] border border-white/5"
+    >
       <div className="flex gap-1 text-yellow-500 mb-4">
         {[1, 2, 3, 4, 5].map(i => <Star key={i} className="h-4 w-4 fill-current" />)}
       </div>
@@ -273,6 +286,6 @@ function TestimonialCard({ name, role, quote }: { name: string, role: string, qu
           <p className="text-xs text-gray-500">{role}</p>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

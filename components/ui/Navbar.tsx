@@ -1,35 +1,38 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import React, { useMemo } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import CardNav from "./CardNav";
+import { NotificationCenter } from "../NotificationCenter";
 
 export function Navbar() {
-    const { user, loading } = useAuth();
+    const { user, loading, role } = useAuth();
     const router = useRouter();
 
-    const handleLogout = async () => {
+    const handleLogout = React.useCallback(async () => {
         try {
             await signOut(auth);
             router.push("/login");
         } catch (error) {
             console.error("Error signing out:", error);
         }
-    };
-
-    if (loading) return null;
+    }, [router]);
 
     const textColor = "#e0e7ff";
 
-    const loggedInItems = [
+    const loggedInItems = useMemo(() => [
         {
             label: "Discover",
             bgColor: "",
             textColor: textColor,
             links: [
-                { label: "Community Feed", href: "/dashboard", ariaLabel: "Go to Dashboard" }
+                { label: "Community Feed", href: "/dashboard", ariaLabel: "Go to Dashboard" },
+                { label: "Leaderboard", href: "/leaderboard", ariaLabel: "View Leaderboard" },
+                { label: "Test Panel", href: "/test", ariaLabel: "System Tests" }, // Added for user testing
+                ...(role === "admin" ? [{ label: "Admin Panel", href: "/admin", ariaLabel: "Admin Dashboard" }] : [])
             ]
         },
         {
@@ -52,9 +55,9 @@ export function Navbar() {
                 { label: "Sign Out", ariaLabel: "Log Out", onClick: handleLogout }
             ]
         }
-    ];
+    ], [role, user, textColor, handleLogout]); // Dependencies
 
-    const loggedOutItems = [
+    const loggedOutItems = useMemo(() => [
         {
             label: "Product",
             bgColor: "",
@@ -73,18 +76,24 @@ export function Navbar() {
                 { label: "Register", href: "/register", ariaLabel: "Register" }
             ]
         }
-    ];
+    ], [textColor]);
+
+    if (loading) return null;
 
     return (
-        <CardNav
-            logoText="SkillSwap"
-            items={user ? loggedInItems : loggedOutItems}
-            baseColor="rgba(255,255,255,0.05)"
-            buttonBgColor="#4f46e5"
-            buttonTextColor="#fff"
-            ctaLabel={!user ? "Get Started" : undefined}
-            onCtaClick={!user ? () => router.push("/register") : undefined}
-            menuColor="#fff"
-        />
+        <div className="relative w-full z-50">
+            <CardNav
+                key={user ? "user" : "guest"}
+                logoText="SkillSwap"
+                items={user ? loggedInItems : loggedOutItems}
+                baseColor="rgba(255,255,255,0.05)"
+                buttonBgColor="#4f46e5"
+                buttonTextColor="#fff"
+                ctaLabel={!user ? "Get Started" : undefined}
+                onCtaClick={!user ? () => router.push("/register") : undefined}
+                menuColor="#fff"
+                rightContent={user ? <NotificationCenter /> : null}
+            />
+        </div>
     );
 }

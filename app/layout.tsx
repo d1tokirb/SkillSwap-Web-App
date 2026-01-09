@@ -1,3 +1,5 @@
+import { XPNotification } from "@/components/ui/XPNotification";
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -7,6 +9,7 @@ import { ClientMotionWrapper } from "@/components/ClientMotionWrapper";
 import { Navbar } from "@/components/ui/Navbar";
 import BackgroundManager from "@/components/ui/BackgroundManager";
 import { AuthProvider } from "@/context/AuthContext";
+import { AchievementManager } from "@/components/AchievementManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen relative text-white bg-transparent`}
       >
@@ -38,7 +41,9 @@ export default function RootLayout({
             <ClientMotionWrapper>
               <NotificationProvider>
                 <BackgroundManager />
+                <AchievementManager />
                 <Navbar />
+                <XPNotification />
                 <div className="relative z-10 pt-24">
                   {children}
                 </div>

@@ -31,7 +31,7 @@ export default function TermsPage() {
 
                     <section>
                         <h2 className="text-xl font-bold text-white mb-4">4. Disclaimers & Liability</h2>
-                        <p>The service is provided on an "AS IS" and "AS AVAILABLE" basis. SkillSwap connects users but does not employ them. We verify email addresses but cannot guarantee the accuracy of user-provided skills, the quality of instruction, or user conduct off-platform. Interact with others at your own risk and please follow our Safety Guidelines.</p>
+                        <p>The service is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis. SkillSwap connects users but does not employ them. We verify email addresses but cannot guarantee the accuracy of user-provided skills, the quality of instruction, or user conduct off-platform. Interact with others at your own risk and please follow our Safety Guidelines.</p>
                     </section>
 
                     <section>
