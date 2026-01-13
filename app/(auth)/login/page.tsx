@@ -33,25 +33,7 @@ export default function Login() {
         }
     };
 
-    const handleAutoLogin = async (type: "admin" | "user") => {
-        const creds = type === "admin"
-            ? { e: "admin@admin.com", p: "aaaaaaa" }
-            : { e: "user@user.com", p: "aaaaaaa" };
 
-        setEmail(creds.e);
-        setPassword(creds.p);
-
-        setLoading(true);
-        try {
-            await signInWithEmailAndPassword(auth, creds.e, creds.p);
-            router.push("/dashboard");
-        } catch (err: any) {
-            console.error(err);
-            setError("Auto-login failed. Does this user exist?");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleGoogleLogin = async () => {
         setLoading(true);
@@ -162,27 +144,7 @@ export default function Login() {
                                 </Link>
                             </p>
 
-                            <div className="pt-4 border-t border-white/10">
-                                <p className="text-xs text-center text-muted-foreground mb-3 uppercase tracking-wider">Test Mode</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => handleAutoLogin("admin")}
-                                        className="text-xs h-8 border-orange-500/20 text-orange-400 hover:bg-orange-500/10"
-                                    >
-                                        Auto: Admin
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => handleAutoLogin("user")}
-                                        className="text-xs h-8 border-blue-500/20 text-blue-400 hover:bg-blue-500/10"
-                                    >
-                                        Auto: User
-                                    </Button>
-                                </div>
-                            </div>
+
                         </form>
                     </div>
                 </motion.div>
