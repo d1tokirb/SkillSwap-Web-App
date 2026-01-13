@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Code, ChefHat, Languages, Calculator, Music, Palette, Dumbbell, PenTool, Rocket, Briefcase, Cpu, Camera } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ExploreGraphs } from "@/components/ExploreGraphs";
 
 const categories = [
     {
@@ -87,11 +88,12 @@ export default function ExplorePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-muted-foreground text-lg"
                     >
                         SkillSwap connects you with people who are passionate about sharing their knowledge. Here are just a few ways our community learns together.
                     </motion.p>
                 </div>
+
+                <ExploreGraphs />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {categories.map((skill, idx) => (

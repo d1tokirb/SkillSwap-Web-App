@@ -74,16 +74,16 @@ export default function MessagesPage() {
 
             <div className="glass-card border border-white/10 rounded-xl overflow-hidden min-h-[400px]">
                 {conversations.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                        <div className="bg-white/5 p-4 rounded-full mb-4">
-                            <MessageSquare className="h-8 w-8 text-gray-400" />
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8 bg-gradient-to-b from-white/5 to-transparent">
+                        <div className="bg-blue-600/20 p-6 rounded-full mb-6 ring-4 ring-blue-600/10">
+                            <MessageSquare className="h-10 w-10 text-blue-400" />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">No messages yet</h3>
                         <p className="text-gray-400 text-sm max-w-xs mx-auto mb-6">
-                            Connect with others by starting a conversation from the Dashboard or a Profile.
+                            Connect with others to start swapping skills!
                         </p>
                         <Link href="/dashboard">
-                            <Button className="bg-blue-600 hover:bg-blue-500 text-white">
+                            <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20">
                                 Find People
                             </Button>
                         </Link>
@@ -106,8 +106,10 @@ export default function MessagesPage() {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     onClick={() => router.push(`/messages/${convo.id}`)}
-                                    className="block p-4 hover:bg-[#1a1f33] transition-colors group relative cursor-pointer"
+                                    className="block p-4 hover:bg-[#1a1f33] transition-all duration-200 group relative cursor-pointer hover:pl-6"
                                 >
+                                    {/* Active Indicator on Hover */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                                     <div className="flex items-center justify-between pr-8">
                                         <div className="flex items-center gap-4">

@@ -130,9 +130,9 @@ export function NotificationCenter() {
                                     top: position.top,
                                     right: window.innerWidth < 640 ? 16 : position.right,
                                     left: window.innerWidth < 640 ? 16 : 'auto',
-                                    maxWidth: '100vw' // Reset maxWidth constraints as we control left/right
+                                    maxWidth: '100vw'
                                 }}
-                                className="w-auto sm:w-80 bg-[#151a2d] border border-white/10 rounded-xl shadow-2xl z-[10001] overflow-hidden"
+                                className="w-[calc(100vw-32px)] sm:w-80 bg-[#151a2d] border border-white/10 rounded-xl shadow-2xl z-[10001] overflow-hidden"
                             >
                                 <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0c1121]">
                                     <h3 className="font-bold text-white">Notifications</h3>
@@ -166,8 +166,11 @@ export function NotificationCenter() {
 
                                         ))
                                     ) : (
-                                        <div className="p-8 text-center text-gray-500 text-sm">
-                                            No new notifications
+                                        <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+                                            <div className="bg-white/5 p-3 rounded-full mb-3">
+                                                <Bell className="h-5 w-5 opacity-50" />
+                                            </div>
+                                            <span className="text-sm">No new notifications</span>
                                         </div>
                                     )}
                                 </div>

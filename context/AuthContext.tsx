@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, onSnapshot, DocumentSnapshot, DocumentData, FirestoreError } from "firebase/firestore";
 import { UserProfile } from "@/types";
 
 interface AuthContextType {
@@ -52,33 +52,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, [user]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setUser(user);
-            if (user) {
-                // Fetch user data & role from Firestore
-                try {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data() as UserProfile;
+        let unsubscribeUserDoc: (() => void) | null = null;
+
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+
+            // Clean up previous user listener
+            if (unsubscribeUserDoc) {
+                unsubscribeUserDoc();
+                unsubscribeUserDoc = null;
+            }
+
+            if (currentUser) {
+                // Subscribe to user role & data changes
+                unsubscribeUserDoc = onSnapshot(doc(db, "users", currentUser.uid), (docSnap: DocumentSnapshot<DocumentData>) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data() as UserProfile;
                         setRole(data.role || "user");
                         setUserData(data);
                     } else {
-                        setRole("user"); // Default role
+                        setRole("user");
                         setUserData(null);
                     }
-                } catch (error) {
-                    console.error("Error fetching user role:", error);
+                    setLoading(false); // Can set loading false once data is received
+                }, (error: FirestoreError) => {
+                    console.error("Error fetching user data:", error);
                     setRole("user");
                     setUserData(null);
-                }
+                    setLoading(false);
+                });
             } else {
                 setRole(null);
                 setUserData(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeUserDoc) {
+                unsubscribeUserDoc();
+            }
+        };
     }, []);
 
     return (

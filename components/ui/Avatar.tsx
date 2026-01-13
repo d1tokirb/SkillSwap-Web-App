@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { FirestoreTimestamp } from "@/types";
+import Image from "next/image";
 
 interface AvatarProps {
     src?: string | null; // Allow null for robustness
@@ -74,10 +75,12 @@ export function Avatar({ src, alt = "User", className, lastSeen, size = "md" }: 
         <div className={cn("relative inline-block shrink-0 rounded-full bg-[#0c1121]", sizeClasses[size].split(" ").slice(0, 2).join(" "), className)}>
             <div className={cn("relative w-full h-full rounded-full overflow-hidden")}>
                 {src ? (
-                    <img
+                    <Image
                         src={src}
                         alt={alt}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                 ) : (
                     <div className={cn("w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white shadow-inner select-none", className?.includes("text-") ? "" : sizeClasses[size].split(" ").slice(2).join(" "))}>

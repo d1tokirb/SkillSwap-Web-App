@@ -2,33 +2,52 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, limit } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Trash2, TrendingUp, Users, Calendar, Shield, ShieldOff, MessageSquare, FileText, ChevronDown, ChevronRight, ChevronUp, Clock, Search, Edit } from "lucide-react";
-import { query, orderBy, limit } from "firebase/firestore";
-
+import { Trash2, TrendingUp, Users, Calendar, Shield, ShieldOff, MessageSquare, FileText, ChevronDown, ChevronRight, ChevronUp, Clock, Search, Edit, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { UserProfile, Post, Conversation, ModerationLog } from "@/types";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useNotification } from "@/context/NotificationContext";
 import { EditProfileModal } from "@/components/EditProfileModal";
+import { Avatar } from "@/components/ui/Avatar";
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+    BarChart, Bar, Legend, PieChart, Pie, Cell
+} from 'recharts';
+
+const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    if (typeof date === 'object' && 'seconds' in date) {
+        return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    return new Date(date).toLocaleDateString();
+};
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function AdminPage() {
     const { user, role, loading } = useAuth();
     const router = useRouter();
     const { addNotification } = useNotification();
 
-    const [users, setUsers] = useState<any[]>([]);
-    const [posts, setPosts] = useState<any[]>([]);
-    const [conversations, setConversations] = useState<any[]>([]);
+    // Imports removed
+
+    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [reports, setReports] = useState<ModerationLog[]>([]);
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalSessions: 0,
         totalPosts: 0,
-        topSkills: [] as { name: string; count: number }[]
+        topSkills: [] as { name: string; count: number }[],
+        userGrowth: [] as { date: string; count: number }[],
+        categoryDistribution: [] as { name: string; value: number }[]
     });
-    const [view, setView] = useState<"users" | "posts" | "messages" | "reports">("users");
+    const [view, setView] = useState<"users" | "posts" | "messages" | "reports">("reports");
     const [searchTerm, setSearchTerm] = useState("");
 
     // Expansion State
@@ -59,6 +78,7 @@ export default function AdminPage() {
             const userSnapshot = await getDocs(collection(db, "users"));
             const usersList: any[] = [];
             const skillCounts: Record<string, number> = {};
+            const growthMap: Record<string, number> = {};
 
             userSnapshot.forEach(doc => {
                 const data = doc.data();
@@ -70,13 +90,28 @@ export default function AdminPage() {
                         skillCounts[s] = (skillCounts[s] || 0) + 1;
                     });
                 }
+
+                // Growth Data
+                const joinedAt = data.joinedAt;
+                if (joinedAt) {
+                    const date = new Date(joinedAt.seconds ? joinedAt.seconds * 1000 : joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    growthMap[date] = (growthMap[date] || 0) + 1;
+                }
             });
             setUsers(usersList);
 
             // Fetch Posts
             const postsSnapshot = await getDocs(collection(db, "posts"));
             const postsList: any[] = [];
-            postsSnapshot.forEach(doc => postsList.push({ id: doc.id, ...doc.data() }));
+            const categoryCounts: Record<string, number> = {};
+
+            postsSnapshot.forEach(doc => {
+                const data = doc.data();
+                postsList.push({ id: doc.id, ...data });
+                // Category Distribution
+                const cat = data.category || "Uncategorized";
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            });
             setPosts(postsList);
 
             // Fetch Conversations
@@ -84,6 +119,13 @@ export default function AdminPage() {
             const convoList: any[] = [];
             convoSnapshot.forEach(doc => convoList.push({ id: doc.id, ...doc.data() }));
             setConversations(convoList);
+
+            // Fetch Reports
+            const reportsQuery = query(collection(db, "moderation_logs"), orderBy("createdAt", "desc"));
+            const reportsSnapshot = await getDocs(reportsQuery);
+            const reportsList: any[] = [];
+            reportsSnapshot.forEach(doc => reportsList.push({ id: doc.id, ...doc.data() }));
+            setReports(reportsList);
 
             // Fetch Sessions
             const sessionSnapshot = await getDocs(collection(db, "requests"));
@@ -94,11 +136,27 @@ export default function AdminPage() {
                 .sort((a, b) => b.count - a.count)
                 .slice(0, 5);
 
+            // Format Growth Data
+            let accumulatedUsers = 0;
+            // Sort dates chronologically - simple approach for now assuming recent dates
+            const sortedDates = Object.keys(growthMap).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+            // Create cumulative growth
+            const growthData = sortedDates.map(date => {
+                accumulatedUsers += growthMap[date];
+                return { date, count: accumulatedUsers };
+            });
+
+            // Format Category Data
+            const catData = Object.entries(categoryCounts).map(([name, value]) => ({ name, value }));
+
             setStats({
                 totalUsers: usersList.length,
                 totalSessions: sessionSnapshot.size,
                 totalPosts: postsSnapshot.size,
-                topSkills: sortedSkills
+                topSkills: sortedSkills,
+                userGrowth: growthData.length > 0 ? growthData : [{ date: 'Today', count: usersList.length }],
+                categoryDistribution: catData
             });
 
         } catch (err) {
@@ -147,6 +205,39 @@ export default function AdminPage() {
         } catch (err) {
             console.error(err);
             addNotification("Failed to delete post", "info");
+        }
+    };
+
+    const handleDismissReport = async (reportId: string) => {
+        try {
+            await updateDoc(doc(db, "moderation_logs", reportId), {
+                status: "dismissed"
+            });
+            setReports(reports.map(r => r.id === reportId ? { ...r, status: "dismissed" } : r));
+            addNotification("Report dismissed", "success");
+        } catch (error) {
+            console.error(error);
+            addNotification("Failed to dismiss report", "error");
+        }
+    };
+
+    const handleBanUserFromReport = async (userId: string, reportId: string) => {
+        if (!confirm("Are you sure you want to BAN this user? This cannot be undone easily.")) return;
+        try {
+            // Delete user doc (or set logic to banned) - Use confirm modal logic ideally
+            // For now, simpler approach:
+            await deleteDoc(doc(db, "users", userId));
+            await updateDoc(doc(db, "moderation_logs", reportId), {
+                status: "resolved",
+                note: "User Banned"
+            });
+            setReports(reports.map(r => r.id === reportId ? { ...r, status: "resolved" } : r));
+            // Also remove from local user list
+            setUsers(users.filter(u => u.uid !== userId));
+            addNotification("User banned and report resolved", "success");
+        } catch (error) {
+            console.error(error);
+            addNotification("Failed to ban user", "error");
         }
     };
 
@@ -236,6 +327,14 @@ export default function AdminPage() {
                         </div>
                         <nav className="p-2 space-y-1">
                             <button
+                                onClick={() => setView("reports")}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === "reports" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                    }`}
+                            >
+                                <TrendingUp className="h-5 w-5" />
+                                <span className="font-medium">Analytics</span>
+                            </button>
+                            <button
                                 onClick={() => setView("users")}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === "users" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
                                     }`}
@@ -259,14 +358,6 @@ export default function AdminPage() {
                                 <MessageSquare className="h-5 w-5" />
                                 <span className="font-medium">Messages</span>
                             </button>
-                            <button
-                                onClick={() => setView("reports")}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${view === "reports" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
-                                    }`}
-                            >
-                                <TrendingUp className="h-5 w-5" />
-                                <span className="font-medium">Analytics</span>
-                            </button>
                         </nav>
                     </div>
                 </div>
@@ -287,6 +378,132 @@ export default function AdminPage() {
                             </div>
                         )}
                     </div>
+
+                    {view === "reports" && (
+                        <div className="space-y-6">
+                            {/* Key Metrics Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="glass-card border-white/10 p-6 rounded-xl">
+                                    <div className="flex items-center gap-4 mb-2">
+                                        <div className="p-3 bg-blue-600/10 rounded-lg">
+                                            <Users className="h-6 w-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-sm">Total Users</p>
+                                            <h3 className="text-3xl font-bold">{stats.totalUsers}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="glass-card border-white/10 p-6 rounded-xl">
+                                    <div className="flex items-center gap-4 mb-2">
+                                        <div className="p-3 bg-green-500/10 rounded-lg text-green-400">
+                                            <Calendar className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-sm">Total Sessions</p>
+                                            <h3 className="text-3xl font-bold">{stats.totalSessions}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="glass-card border-white/10 p-6 rounded-xl">
+                                    <div className="flex items-center gap-4 mb-2">
+                                        <div className="p-3 bg-purple-500/10 rounded-lg text-purple-400">
+                                            <FileText className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-sm">Active Posts</p>
+                                            <h3 className="text-3xl font-bold">{stats.totalPosts}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Main Charts Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Top Skills Bar Chart */}
+                                <div className="glass-card border-white/10 p-6 rounded-xl">
+                                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4 text-blue-400" /> Most Popular Skills
+                                    </h3>
+                                    <div className="h-[300px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={stats.topSkills} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                                                <XAxis type="number" stroke="#94a3b8" />
+                                                <YAxis dataKey="name" type="category" width={80} stroke="#94a3b8" fontSize={12} />
+                                                <RechartsTooltip
+                                                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
+                                                    cursor={{ fill: '#ffffff10' }}
+                                                />
+                                                <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]}>
+                                                    {stats.topSkills.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Category Pie Chart */}
+                                <div className="glass-card border-white/10 p-6 rounded-xl">
+                                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-purple-400" /> Post Categories
+                                    </h3>
+                                    <div className="h-[300px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={stats.categoryDistribution}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={100}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                >
+                                                    {stats.categoryDistribution.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} />
+                                                <Legend
+                                                    verticalAlign="bottom"
+                                                    height={36}
+                                                    iconType="circle"
+                                                    formatter={(value) => <span className="text-gray-400 ml-1">{value}</span>}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* User Growth Area Chart */}
+                                <div className="glass-card border-white/10 p-6 rounded-xl col-span-full">
+                                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                                        <Users className="h-4 w-4 text-green-400" /> User Growth
+                                    </h3>
+                                    <div className="h-[300px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={stats.userGrowth} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+                                                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <XAxis dataKey="date" stroke="#94a3b8" />
+                                                <YAxis stroke="#94a3b8" />
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                                <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} />
+                                                <Area type="monotone" dataKey="count" stroke="#82ca9d" fillOpacity={1} fill="url(#colorUsers)" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {view === "posts" && (
                         <div className="bg-card border border-white/10 rounded-xl overflow-hidden">
@@ -336,7 +553,7 @@ export default function AdminPage() {
                                                     <td colSpan={4} className="p-4 text-gray-400 border-b border-white/5">
                                                         <div className="flex gap-4">
                                                             {p.authorPhoto && (
-                                                                <img src={p.authorPhoto} alt="Author" className="w-16 h-16 rounded-lg object-cover bg-black" />
+                                                                <Avatar src={p.authorPhoto} alt={p.authorName} size="lg" />
                                                             )}
                                                             <div>
                                                                 <h4 className="text-sm font-bold text-gray-300 mb-1">Description:</h4>
@@ -358,6 +575,91 @@ export default function AdminPage() {
                                 </tbody>
                             </table>
                             {filteredPosts.length === 0 && <p className="p-8 text-center text-muted-foreground">No posts found.</p>}
+                        </div>
+                    )}
+
+                    {view === "reports" && (
+                        <div className="bg-card border border-white/10 rounded-xl overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-[#151a2d] border-b border-white/10">
+                                    <tr>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Severity</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Content / Reason</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">User</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Status</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Time</th>
+                                        <th className="p-4 text-right font-semibold text-gray-300">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/10">
+                                    {reports.map((r) => (
+                                        <tr key={r.id} className="hover:bg-[#1a1f33] transition-colors">
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase
+                                                    ${r.reason.includes("High") || r.content.length > 500 ? // makeshift high check if severity field missing in old logs
+                                                        "bg-red-500/20 text-red-500 border border-red-500/20" :
+                                                        "bg-yellow-500/20 text-yellow-500 border border-yellow-500/20"
+                                                    }`}>
+                                                    {r.status === 'dismissed' ? 'Dismissed' : (r.source === 'user_report' ? 'Report' : 'Flag')}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col max-w-sm">
+                                                    <span className="font-medium text-white line-clamp-1" title={r.content}>{r.content}</span>
+                                                    <span className="text-xs text-muted-foreground">{r.reason} ({r.context})</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-sm">
+                                                <div className="font-medium">{r.userName}</div>
+                                                <div className="text-xs text-muted-foreground">{r.userId}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded text-xs capitalize
+                                                    ${r.status === "resolved" ? "bg-green-500/10 text-green-500" :
+                                                        r.status === "dismissed" ? "text-gray-500" :
+                                                            "bg-blue-500/10 text-blue-500"
+                                                    }`}>
+                                                    {r.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-muted-foreground text-sm">
+                                                {formatDate(r.createdAt)}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    {r.status === "pending" && (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-green-400 hover:text-green-500 hover:bg-green-500/10 border-green-500/20"
+                                                                onClick={() => handleDismissReport(r.id)}
+                                                                title="Dismiss (Safe)"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/20"
+                                                                onClick={() => handleBanUserFromReport(r.userId, r.id)}
+                                                                title="Ban User"
+                                                            >
+                                                                <ShieldOff className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {reports.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="p-8 text-center text-muted-foreground">All clear. No pending reports.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     )}
 
@@ -384,7 +686,7 @@ export default function AdminPage() {
                                                     </td>
                                                     <td className="p-4 text-muted-foreground max-w-xs truncate">{c.lastMessage}</td>
                                                     <td className="p-4 text-muted-foreground">
-                                                        {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "N/A"}
+                                                        {formatDate(c.updatedAt)}
                                                     </td>
                                                     <td className="p-4 text-right">
                                                         <Button
@@ -434,134 +736,82 @@ export default function AdminPage() {
                         </div>
                     )}
 
-                    {view === "reports" ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="glass-card border-white/10 p-6 rounded-xl">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 bg-blue-600/10 rounded-lg">
-                                        <Users className="h-6 w-6 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="text-muted-foreground text-sm">Total Users</p>
-                                        <h3 className="text-2xl font-bold">{stats.totalUsers}</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="glass-card border-white/10 p-6 rounded-xl">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 bg-green-500/10 rounded-lg text-green-400">
-                                        <Calendar className="h-6 w-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-muted-foreground text-sm">Total Sessions</p>
-                                        <h3 className="text-2xl font-bold">{stats.totalSessions}</h3>
-                                    </div>
-                                </div>
-                            </div>
+                    {view === "users" && (
+                        <div className="bg-card border border-white/10 rounded-xl overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-[#151a2d] border-b border-white/10">
+                                    <tr>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Name</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Email</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Role</th>
+                                        <th className="p-4 text-left font-semibold text-gray-300">Joined</th>
+                                        <th className="p-4 text-right font-semibold text-gray-300">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/10">
+                                    {filteredUsers.map((u) => (
+                                        <tr key={u.id} className="hover:bg-[#1a1f33] transition-colors">
+                                            <td className="p-4 font-medium">{u.name}</td>
+                                            <td className="p-4 text-muted-foreground">{u.email}</td>
+                                            <td className="p-4 capitalize">{u.role}</td>
+                                            <td className="p-4 text-muted-foreground">
+                                                {formatDate(u.joinedAt)}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="text-gray-400 hover:text-white hover:bg-white/10"
+                                                        onClick={() => handleEditUser(u)}
+                                                        title="Edit User"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
 
-                            <div className="col-span-full md:col-span-3 glass-card border-white/10 p-6 rounded-xl">
-                                <h3 className="text-xl font-bold mb-4">Top Offered Skills</h3>
-                                <div className="space-y-4">
-                                    {stats.topSkills.map((skill, idx) => (
-                                        <div key={idx} className="flex items-center gap-4">
-                                            <span className="w-6 text-muted-foreground text-sm font-mono">#{idx + 1}</span>
-                                            <div className="flex-1">
-                                                <div className="flex justify-between mb-1">
-                                                    <span className="font-medium">{skill.name}</span>
-                                                    <span className="text-muted-foreground text-sm">{skill.count} users</span>
-                                                </div>
-                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-blue-500"
-                                                        style={{ width: `${(skill.count / stats.totalUsers) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {stats.topSkills.length === 0 && <p className="text-muted-foreground">No data available.</p>}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        view === "users" && (
-                            <div className="bg-card border border-white/10 rounded-xl overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-[#151a2d] border-b border-white/10">
-                                        <tr>
-                                            <th className="p-4 text-left font-semibold text-gray-300">Name</th>
-                                            <th className="p-4 text-left font-semibold text-gray-300">Email</th>
-                                            <th className="p-4 text-left font-semibold text-gray-300">Role</th>
-                                            <th className="p-4 text-left font-semibold text-gray-300">Joined</th>
-                                            <th className="p-4 text-right font-semibold text-gray-300">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/10">
-                                        {filteredUsers.map((u) => (
-                                            <tr key={u.id} className="hover:bg-[#1a1f33] transition-colors">
-                                                <td className="p-4 font-medium">{u.name}</td>
-                                                <td className="p-4 text-muted-foreground">{u.email}</td>
-                                                <td className="p-4 capitalize">{u.role}</td>
-                                                <td className="p-4 text-muted-foreground">
-                                                    {u.joinedAt ? new Date(u.joinedAt).toLocaleDateString() : "N/A"}
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    <div className="flex gap-2 justify-end">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="text-gray-400 hover:text-white hover:bg-white/10"
-                                                            onClick={() => handleEditUser(u)}
-                                                            title="Edit User"
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-
-                                                        {u.id !== user?.uid && (
-                                                            <div className="contents">
-                                                                {u.role === "admin" ? (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        className="text-orange-400 hover:text-orange-500 hover:bg-orange-500/10 border-orange-500/20"
-                                                                        onClick={() => handleUpdateRole(u.id, "user")}
-                                                                        title="Revoke Admin Access"
-                                                                    >
-                                                                        <ShieldOff className="h-4 w-4" />
-                                                                    </Button>
-                                                                ) : (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        className="text-blue-400 hover:text-blue-500 hover:bg-blue-500/10 border-blue-500/20"
-                                                                        onClick={() => handleUpdateRole(u.id, "admin")}
-                                                                        title="Promote to Admin"
-                                                                    >
-                                                                        <Shield className="h-4 w-4" />
-                                                                    </Button>
-                                                                )}
+                                                    {u.id !== user?.uid && (
+                                                        <div className="contents">
+                                                            {u.role === "admin" ? (
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/20"
-                                                                    onClick={() => requestDeleteUser(u.id)}
+                                                                    className="text-orange-400 hover:text-orange-500 hover:bg-orange-500/10 border-orange-500/20"
+                                                                    onClick={() => handleUpdateRole(u.id, "user")}
+                                                                    title="Revoke Admin Access"
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
+                                                                    <ShieldOff className="h-4 w-4" />
                                                                 </Button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )
-                    )
-                    }
-                </div >
-            </div >
+                                                            ) : (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="text-blue-400 hover:text-blue-500 hover:bg-blue-500/10 border-blue-500/20"
+                                                                    onClick={() => handleUpdateRole(u.id, "admin")}
+                                                                    title="Promote to Admin"
+                                                                >
+                                                                    <Shield className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/20"
+                                                                onClick={() => requestDeleteUser(u.id)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             <EditProfileModal
                 isOpen={editModalOpen}
@@ -577,6 +827,6 @@ export default function AdminPage() {
                 title="Delete User"
                 message="Are you sure you want to delete this user? This cannot be undone."
             />
-        </div >
+        </div>
     );
 }

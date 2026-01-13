@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { addXp, XP_REWARDS } from "@/lib/gamification";
@@ -12,6 +12,7 @@ import { Send, ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
 import { RequestModal } from "@/components/ui/RequestModal";
 import { useNotification } from "@/context/NotificationContext";
+import { checkContentSafety, reportViolation } from "@/lib/moderation";
 
 interface Message {
     id: string;
@@ -75,20 +76,33 @@ export default function ChatPage() {
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !user) return;
+        const text = newMessage.trim();
+        if (!text || !user) return;
 
         try {
-            const text = newMessage.trim();
             setNewMessage("");
 
-            // Add message to subcollection
-            await addDoc(collection(db, "conversations", id as string, "messages"), {
+            // 1. Add message immediately
+            const docRef = await addDoc(collection(db, "conversations", id as string, "messages"), {
                 senderId: user.uid,
                 text: text,
                 createdAt: serverTimestamp()
             });
 
-            // Update conversation last message AND senderId (Fixes notification bug)
+            // 2. Background Moderation
+            (async () => {
+                const safety = await checkContentSafety(text);
+                if (safety.flagged) {
+                    // Blocked! Delete the message.
+                    await deleteDoc(doc(db, "conversations", id as string, "messages", docRef.id));
+                    await reportViolation(user.uid, user.displayName || "Unknown", text, safety.reason || "Unsafe message", "Chat Message (Retroactively Blocked)");
+                    addNotification(`Message removed: ${safety.reason}`, "error");
+                } else if (safety.severity === "low") {
+                    reportViolation(user.uid, user.displayName || "Unknown", text, safety.reason || "Low severity message", "Chat Message (Allowed)");
+                }
+            })();
+
+            // Update conversation last message AND senderId
             await setDoc(doc(db, "conversations", id as string), {
                 lastMessage: text,
                 lastMessageSenderId: user.uid,

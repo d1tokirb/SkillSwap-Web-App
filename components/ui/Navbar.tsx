@@ -31,7 +31,6 @@ export function Navbar() {
             links: [
                 { label: "Community Feed", href: "/dashboard", ariaLabel: "Go to Dashboard" },
                 { label: "Leaderboard", href: "/leaderboard", ariaLabel: "View Leaderboard" },
-                { label: "Test Panel", href: "/test", ariaLabel: "System Tests" }, // Added for user testing
                 ...(role === "admin" ? [{ label: "Admin Panel", href: "/admin", ariaLabel: "Admin Dashboard" }] : [])
             ]
         },

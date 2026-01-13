@@ -1,8 +1,9 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { ReportButton } from "@/components/ui/ReportButton";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, getDoc, query, orderBy, limit, startAfter, where, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, query, orderBy, limit, startAfter, where, DocumentData, QueryDocumentSnapshot, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -11,25 +12,17 @@ import Link from "next/link";
 import { Search, Plus, Sparkles, Inbox, User as UserIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { UserProfile, FirestoreTimestamp } from "@/types";
+import { UserProfile, FirestoreTimestamp, Post } from "@/types";
 
 export default function Dashboard() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    interface Post {
-        id: string;
-        title: string;
-        description: string;
-        userId: string;
-        authorName: string;
-        authorPhoto: string;
-        tags?: string[];
-        category?: string;
-        authorLastSeen?: FirestoreTimestamp;
-    }
+    // Local Post interface removed in favor of @/types
 
-    const [posts, setPosts] = useState<Post[]>([]);
+    type EnrichedPost = Post & { authorLastSeen?: FirestoreTimestamp };
+
+    const [posts, setPosts] = useState<EnrichedPost[]>([]);
     const [foundUsers, setFoundUsers] = useState<UserProfile[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchMode, setSearchMode] = useState<"posts" | "users">("posts");
@@ -78,15 +71,15 @@ export default function Dashboard() {
             if (isInitial) setFetching(true);
             else setLoadingMore(true);
 
-            let q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(20));
+            let q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(100));
 
             if (!isInitial && lastVisible) {
-                q = query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(20));
+                q = query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(100));
             }
 
             const querySnapshot = await getDocs(q);
 
-            if (querySnapshot.docs.length < 20) setHasMore(false);
+            if (querySnapshot.docs.length < 100) setHasMore(false);
             else setHasMore(true);
 
             if (!querySnapshot.empty) {
@@ -95,7 +88,7 @@ export default function Dashboard() {
                 if (!isInitial) setHasMore(false); // No more docs
             }
 
-            const fetchedPosts: Post[] = [];
+            const fetchedPosts: EnrichedPost[] = [];
 
             // Collect Author IDs
             const userIds = new Set<string>();
@@ -124,7 +117,7 @@ export default function Dashboard() {
                     authorLastSeen: authorData[data.userId]?.lastSeen,
                     authorPhoto: authorData[data.userId]?.photoURL || data.authorPhoto,
                     authorName: authorData[data.userId]?.name || data.authorName
-                } as Post);
+                } as unknown as EnrichedPost);
             });
 
             if (isInitial) setPosts(fetchedPosts);
@@ -147,7 +140,7 @@ export default function Dashboard() {
             // For this app, we fetch a larger set of users and filter client-side.
             // Note: This is not scalable for millions of users but works for thousands.
 
-            const q = query(collection(db, "users"), limit(100)); // Fetch up to 100 recent users
+            const q = query(collection(db, "users"), limit(200)); // Fetch up to 200 recent users
             const snapshot = await getDocs(q);
 
             const term = searchTerm.toLowerCase();
@@ -173,7 +166,7 @@ export default function Dashboard() {
     };
 
     const handleMessage = async (targetUserId: string, targetUserName: string) => {
-        if (!user) return;
+        if (!user || !targetUserId) return;
         setStartingChat(targetUserId);
 
         const participants = [user.uid, targetUserId].sort();
@@ -191,7 +184,7 @@ export default function Dashboard() {
                         [targetUserId]: targetUserName
                     },
                     lastMessage: "",
-                    updatedAt: new Date().toISOString()
+                    updatedAt: serverTimestamp()
                 });
             }
 
@@ -214,7 +207,7 @@ export default function Dashboard() {
         const matchesSearch = searchMode === 'users' ? true : (
             post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             post.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (post.tags && post.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
+            (post.tags && post.tags.some((t: string) => t.toLowerCase().includes(searchTerm.toLowerCase())))
         );
 
         let matchesCategory = true;
@@ -225,7 +218,7 @@ export default function Dashboard() {
                 matchesCategory = userWants.some(skill =>
                     post.title.toLowerCase().includes(skill) ||
                     post.description.toLowerCase().includes(skill) ||
-                    post.tags?.some(t => t.toLowerCase().includes(skill)) ||
+                    post.tags?.some((t: string) => t.toLowerCase().includes(skill)) ||
                     post.category?.toLowerCase().includes(skill)
                 );
             }
@@ -245,18 +238,18 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 max-w-7xl">
+        <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
             {/* Hero & Search */}
             <div className="glass-panel p-4 sm:p-8 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
                 <div className="z-10">
-                    <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-                        What do you want to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">learn</span> today?
+                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-2 leading-tight">
+                        What do you want to <span className="text-aurora">learn</span> today?
                     </h1>
                     <p className="text-gray-400 text-lg">Discover skills, find teachers, and swap knowledge.</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto z-10">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto z-10 items-center">
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input
@@ -264,7 +257,7 @@ export default function Dashboard() {
                             placeholder={searchMode === 'posts' ? "Search skills..." : "Search people..."}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full h-10 rounded-lg pl-9 bg-[#0c1121]/50 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
+                            className="w-full h-10 rounded-lg pl-9 bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
                         />
                     </div>
                     {/* Search Mode Toggle */}
@@ -284,7 +277,7 @@ export default function Dashboard() {
                     </div>
 
                     <Link href="/posts/create">
-                        <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 w-full sm:w-auto">
+                        <Button className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-500/20 w-full sm:w-auto whitespace-nowrap">
                             <Plus className="mr-2 h-4 w-4" /> Offer Skill
                         </Button>
                     </Link>
@@ -313,7 +306,7 @@ export default function Dashboard() {
             {searchMode === 'users' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {foundUsers.map(u => (
-                        <div key={u.id} className="glass-card p-6 rounded-2xl flex items-center gap-4 hover:border-blue-500/30 transition-all">
+                        <div key={u.id} className="glass-card p-6 rounded-2xl flex items-center gap-4 hover:border-blue-500/30 transition-all duration-300 hover:scale-105 hover:bg-white/5 cursor-pointer">
                             <Link href={`/profile/${u.id}`}>
                                 <Avatar src={u.photoURL} alt={u.name} lastSeen={u.lastSeen} size="lg" />
                             </Link>
@@ -331,13 +324,21 @@ export default function Dashboard() {
                         </div>
                     ))}
                     {foundUsers.length === 0 && !fetching && searchTerm && (
-                        <div className="col-span-full py-20 text-center text-gray-500">
-                            No users found matching "{searchTerm}"
+                        <div className="col-span-full py-24 text-center">
+                            <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <UserIcon className="h-10 w-10 text-gray-400 opacity-50" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">No users found</h3>
+                            <p className="text-gray-400">We couldn't find anyone named "{searchTerm}".</p>
                         </div>
                     )}
                     {searchTerm === "" && (
-                        <div className="col-span-full py-20 text-center text-gray-500">
-                            Type to search for people...
+                        <div className="col-span-full py-24 text-center">
+                            <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Search className="h-10 w-10 text-blue-400 opacity-50" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Find People</h3>
+                            <p className="text-gray-400">Search by name or bio to connect with others.</p>
                         </div>
                     )}
                 </div>
@@ -346,7 +347,7 @@ export default function Dashboard() {
             {/* Masonry Feed (Posts) */}
             {searchMode === 'posts' && (
                 <>
-                    <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+                    <div className="columns-1 md:columns-2 lg:columns-3 2xl:columns-4 gap-6 space-y-6">
                         {filteredPosts.map((post, idx) => (
                             <motion.div
                                 key={post.id}
@@ -355,7 +356,7 @@ export default function Dashboard() {
                                 transition={{ delay: idx * 0.05 }}
                                 className="break-inside-avoid mb-6"
                             >
-                                <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 group hover:border-white/20 transition-all duration-300 hover:shadow-[0_0_20px_-5px_rgba(37,99,235,0.15)] hover:-translate-y-1">
+                                <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 group hover:border-white/20 transition-all duration-300 hover:shadow-[0_0_30px_-5px_rgba(37,99,235,0.2)] hover:scale-[1.02]">
                                     <div className="flex items-center gap-3">
                                         <Link href={`/profile/${post.userId}`} className="block relative group/avatar cursor-pointer">
                                             <Avatar
@@ -380,7 +381,7 @@ export default function Dashboard() {
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                        {post.tags?.map(tag => (
+                                        {post.tags?.map((tag: string) => (
                                             <span key={tag} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                                 #{tag}
                                             </span>
@@ -400,6 +401,17 @@ export default function Dashboard() {
                                                 Your Post
                                             </Button>
                                         )}
+                                        {post.userId !== user.uid && (
+                                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ReportButton
+                                                    userId={post.userId}
+                                                    userName={post.authorName}
+                                                    content={post.description}
+                                                    contentId={post.id}
+                                                    context="Post"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
@@ -407,9 +419,10 @@ export default function Dashboard() {
                     </div>
 
                     {filteredPosts.length === 0 && !fetching && (
-                        <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/10 rounded-2xl">
-                            <div className="bg-white/5 p-4 rounded-full mb-4">
-                                <Inbox className="h-8 w-8 text-gray-400" />
+
+                        <div className="flex flex-col items-center justify-center py-24 text-center glass-card border-white/10 rounded-2xl bg-gradient-to-b from-white/5 to-transparent">
+                            <div className="bg-blue-600/20 p-6 rounded-full mb-6 ring-4 ring-blue-600/10">
+                                <Sparkles className="h-10 w-10 text-blue-400" />
                             </div>
                             <h3 className="text-xl font-bold text-white mb-2">
                                 {selectedCategory === "Recommended" ? "No matches found" : "No skills found yet"}

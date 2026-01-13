@@ -42,7 +42,7 @@ export function Button({
     return (
         <motion.button
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
             className={cn(baseStyles, variants[variant], sizes[size], className)}
             {...props}
         >

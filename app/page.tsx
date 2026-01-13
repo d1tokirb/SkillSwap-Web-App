@@ -58,7 +58,7 @@ export default function Home() {
                 variants={item}
                 className="text-5xl sm:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-white via-blue-100 to-white/60 bg-clip-text text-transparent pb-2"
               >
-                Master New Skills through <span className="text-blue-600 block sm:inline">Peer Exchange</span>
+                Master New Skills through <span className="text-aurora block sm:inline">Peer Exchange</span>
               </motion.h1>
 
               <motion.p
@@ -191,7 +191,7 @@ export default function Home() {
       </main>
 
       <footer className="py-12 border-t border-white/10 bg-[#080b16]">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-6 sm:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <h3 className="text-xl font-bold text-white mb-4">SkillSwap</h3>
@@ -232,9 +232,9 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
       initial={{ opacity: 0, y: 20 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="p-8 rounded-2xl bg-[#13192b] border border-white/5 hover:border-blue-500/30 transition-all hover:shadow-[0_0_30px_-5px_rgba(37,99,235,0.15)]"
+      className="p-8 rounded-2xl glass-card transition-all hover:shadow-[0_0_30px_-5px_rgba(37,99,235,0.15)] group"
     >
-      <div className="mb-6 p-4 rounded-xl bg-blue-500/10 w-fit">
+      <div className="mb-6 p-4 rounded-xl bg-blue-500/10 w-fit group-hover:bg-blue-500/20 transition-colors">
         {icon}
       </div>
       <h3 className="text-xl font-bold mb-3 text-white">{title}</h3>
@@ -271,7 +271,7 @@ function TestimonialCard({ name, role, quote }: { name: string, role: string, qu
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
       whileHover={{ y: -5 }}
-      className="p-6 rounded-2xl bg-[#13192b] border border-white/5"
+      className="p-6 rounded-2xl glass-card"
     >
       <div className="flex gap-1 text-yellow-500 mb-4">
         {[1, 2, 3, 4, 5].map(i => <Star key={i} className="h-4 w-4 fill-current" />)}

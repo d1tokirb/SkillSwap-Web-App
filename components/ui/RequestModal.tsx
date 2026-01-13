@@ -49,9 +49,10 @@ export function RequestModal({ isOpen, onClose, onSubmit, recipientName, initial
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                         className="bg-[#0c1121] border border-white/10 rounded-2xl p-6 w-full max-w-md relative shadow-2xl"
                     >
                         <button

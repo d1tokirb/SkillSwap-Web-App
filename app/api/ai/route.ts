@@ -55,6 +55,35 @@ export async function POST(req: Request) {
             return NextResponse.json({ enhancedText });
         }
 
+        if (type === "moderate") {
+            const prompt = `
+            Analyze the following text for safety violations.
+            
+            Determine SEVERITY:
+            - "high": Hate speech, racial slurs, death threats, sexual violence, dangerous instructions. (VILE/DANGEROUS)
+            - "low": General insults (e.g. "you're stupid"), mild toxic behavior, controversial topics, spammy behavior. (RUDE/ANNOYING)
+            - "safe": Normal conversation, constructive criticism, friendly banter.
+
+            Text: "${content}"
+
+            Return JSON format ONLY:
+            {
+                "severity": "high" | "low" | "safe",
+                "reason": "short description of violation or null"
+            }
+            `;
+
+            const result = await model.generateContent(prompt);
+            const text = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '');
+            try {
+                const json = JSON.parse(text);
+                return NextResponse.json(json);
+            } catch (e) {
+                console.warn("Moderation JSON parse failed", text);
+                return NextResponse.json({ severity: "safe", reason: null });
+            }
+        }
+
         return NextResponse.json({ error: "Invalid request type" }, { status: 400 });
 
     } catch (error) {

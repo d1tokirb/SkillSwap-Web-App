@@ -71,7 +71,7 @@ export default function AboutPage() {
                     <div className="bg-[#0c1121] rounded-2xl p-8 border border-white/10 max-w-2xl mx-auto space-y-4">
                         <div>
                             <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Chapter Name</p>
-                            <p className="text-white font-medium text-lg">[Insert Chapter Name]</p>
+                            <p className="text-white font-medium text-lg">Mahoning County CTC</p>
                         </div>
 
                         <div>
@@ -98,13 +98,13 @@ export default function AboutPage() {
                         <div className="pt-4 border-t border-white/5 mt-4">
                             <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Team Members</p>
                             <ul className="text-blue-300 font-medium space-y-1">
-                                <li>[Member Name 1]</li>
-                                <li>[Member Name 2]</li>
+                                <li>Manasco, Payton</li>
+                                <li>Hurdley, Jonathon</li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
