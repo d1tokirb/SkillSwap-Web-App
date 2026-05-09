@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         // The user asked for "Gemini 2.5 Flash Lite" which doesn't technically exist publicly yet ensuring fallback
         // We will strictly use "gemini-1.5-flash" as it is the current fast standard or "gemini-pro" if flash fails.
         // For now, let's stick to valid model names. "gemini-1.5-flash" is excellent.
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite-preview-06-17" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         if (type === "tag") {
             const prompt = `
